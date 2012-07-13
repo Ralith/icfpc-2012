@@ -11,7 +11,7 @@ import qualified Data.Conduit.Text as C
 import qualified Data.Conduit.List as C
 import Data.List
 import Data.Map (Map)
-import qualified Data.Map
+import qualified Data.Map as Map
 import Data.Maybe hiding (fromJust)
 import qualified Data.Text as T
 import Data.Word
@@ -253,10 +253,15 @@ advanceWorld world action =
                        let isEmpty path =
                              maybe False cellIsEmpty
                                    $ worldNearbyCell world index path
-                       in case fromMaybe EmptyCell $ worldCell world index of
-                            cell | cellFalls cell ->
-                              case () of
-                                () | fromMaybe False fmap
+                       in fmap (\circumstance -> (index, circumstance))
+                            $ case fromMaybe EmptyCell
+                                     $ worldCell world index of
+                                cell | cellFalls cell ->
+                                  case () of
+                                    () | isEmpty [Down] -> Just FallingDown
+                                       | otherwise -> Nothing
+                                     | otherwise -> Nothing)
+                    allIndices
   in makeWorld size
       $ map
           (\index ->
