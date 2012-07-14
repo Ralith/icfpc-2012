@@ -1,9 +1,12 @@
 module Bolder.Simulation (
     StepResult(..), 
     advanceWorld, 
+    advanceRobot,
+    advanceWater,
     fallPossible, 
     cellEnterable,
-    isLiftOpen') where
+    isLiftOpen',
+    Circumstance(..)) where
 
 import Prelude hiding (Either(..))
 
@@ -23,6 +26,7 @@ data Circumstance
 
 
 data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
+    deriving (Show, Eq)
 
 
 isLiftOpen' :: World -> Bool
@@ -63,7 +67,8 @@ getRobotPosition world indices = foldl' (\robotPosition index ->
 isRobotCrushed action oldWorld newWorld robotPosition = 
     Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
        || action == MoveAction Down
-       && cellFalls (fromMaybe EmptyCell (worldNearbyCell oldWorld robotPosition Up))          
+       && cellFalls (fromMaybe EmptyCell 
+                (worldNearbyCell oldWorld robotPosition Up))          
 
 --This can be cleaned up more with a State World
 advanceWorld :: World -> Action -> StepResult
@@ -76,8 +81,9 @@ advanceWorld world action =
       circumstances = getCircumstances world2 allIndices
       world3        = advanceWater (snd robotPosition)
           $ world2 {
-                worldData = makeWorldData size
-                              $ map (advanceCell world2 liftOpen) allIndices,
+                worldData  = 
+                     makeWorldData size $
+                        map (advanceCell world2 liftOpen) allIndices,
                 worldTicks = 1 + worldTicks world2
               }
       robotCrushed = isRobotCrushed action world2 world3 robotPosition

@@ -30,6 +30,7 @@ data World =
       worldDrowningTicks :: Int,
       worldLambdasCollected :: Int
     }
+    deriving (Show, Eq)
 
 
 data Cell
@@ -82,15 +83,15 @@ oppositeDirection Down = Up
 
 
 encodeCell :: Cell -> Word8
-encodeCell RobotCell = 1
-encodeCell WallCell = 2
-encodeCell (RockCell False) = 3
-encodeCell (RockCell True) = 4
-encodeCell LambdaCell = 5
+encodeCell RobotCell              = 1
+encodeCell WallCell               = 2
+encodeCell (RockCell False)       = 3
+encodeCell (RockCell True)        = 4
+encodeCell LambdaCell             = 5
 encodeCell (LambdaLiftCell False) = 6
-encodeCell (LambdaLiftCell True) = 7
-encodeCell EarthCell = 8
-encodeCell EmptyCell = 9
+encodeCell (LambdaLiftCell True)  = 7
+encodeCell EarthCell              = 8
+encodeCell EmptyCell              = 9
 
 
 decodeCell :: Word8 -> Cell
@@ -103,6 +104,7 @@ decodeCell 6 = LambdaLiftCell False
 decodeCell 7 = LambdaLiftCell True
 decodeCell 8 = EarthCell
 decodeCell 9 = EmptyCell
+decodeCell x = error $ "decodeCell " ++ show x ++ " is not a valid option"
 
 
 worldSize :: World -> Location
@@ -137,9 +139,8 @@ worldIndices :: World -> [Location]
 worldIndices world =
   let (width, height) = worldSize world
   in [(columnIndex, rowIndex) |
-      rowIndex <- [1 .. height],
-      columnIndex <- [1 .. width]]
--- This is something worth testing
+      rowIndex    <- [1 .. height],
+      columnIndex <- [1 .. width ]]
 
 
 worldToList :: World -> [(Location, Cell)]
