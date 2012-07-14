@@ -141,7 +141,7 @@ imminentDanger world position
   where
     cellSafe cell direction
         | RockCell{} <- cell
-            = boulderMovable world position direction
+            = boulderMovable world position [direction,direction]
         | otherwise = not (cellSolid cell)
 
 
@@ -150,7 +150,7 @@ cellSolid EarthCell = False
 cellSolid EmptyCell = False
 cellSolid _         = True
 
-boulderMovable :: World -> (Int,Int) -> Direction -> Bool
+boulderMovable :: World -> (Int,Int) -> [Direction] -> Bool
 boulderMovable world pos dir
     | Just EmptyCell <- worldNearbyCell world pos dir = True
     | otherwise = False
