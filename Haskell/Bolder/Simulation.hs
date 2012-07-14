@@ -123,12 +123,27 @@ advanceRobot robotPosition action world =
       priorOccupant = fromMaybe WallCell $ worldCell world prospectivePosition
       effective = cellEnterable priorOccupant
   in if effective
-       then mutateWorld (world { worldLambdasCollected = worldLambdasCollected world +
-                                                         if priorOccupant == LambdaCell
-                                                         then 1
-                                                         else 0})
-                        [(robotPosition, EmptyCell),
-                         (prospectivePosition, RobotCell)]
+       then case priorOccupant of
+              LambdaCell ->
+                  mutateWorld (world { worldLambdasCollected = worldLambdasCollected world + 1})
+                              [(robotPosition, EmptyCell),
+                               (prospectivePosition, RobotCell)]
+              TrampolineCell id ->
+                  let targetPosition = fromMaybe (error "Invalid target")
+                                       $ Map.lookup id $ worldTrampolines world
+                      Just (TargetCell targetId) = worldCell world targetPosition
+                      targets = worldTargets world
+                      trampLocs = fromMaybe [] $ Map.lookup targetId targets
+                      trampLocToId loc = let Just (TrampolineCell id) = worldCell world loc
+                                         in id
+                  in mutateWorld (world {
+                                    worldTrampolines = foldl' (flip Map.delete) (worldTrampolines world)
+                                                       $ map trampLocToId trampLocs,
+                                    worldTargets = Map.delete targetId targets})
+                               $ [(robotPosition, EmptyCell),
+                                  (targetPosition, RobotCell)]
+                               ++ map (flip (,) EmptyCell) trampLocs
+              _ -> mutateWorld world [(robotPosition, EmptyCell), (prospectivePosition, RobotCell)]
        else world
 
 

@@ -279,10 +279,11 @@ readCell c = fromMaybe WallCell
 
 
 cellEnterable :: Cell -> Bool
-cellEnterable LambdaCell = True
-cellEnterable EarthCell = True
+cellEnterable LambdaCell              = True
+cellEnterable EarthCell               = True
+cellEnterable (TrampolineCell _)      = True
 cellEnterable cell | cellIsEmpty cell = True
-                   | otherwise = False
+                   | otherwise        = False
 
 
 cellPushable :: Cell -> Bool
@@ -292,7 +293,8 @@ cellPushable _ = False
 
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
-cellIsEmpty _ = False
+cellIsEmpty _         = False
+
 
 ------------------------------------------------------------------------------------------
 {-
