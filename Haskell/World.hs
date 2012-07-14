@@ -106,8 +106,8 @@ decodeCell 9 = EmptyCell
 
 worldSize :: World -> (Int, Int)
 worldSize world =
-  let (_, (nColumns, nRows)) = bounds $ worldData world
-  in (nColumns + 1, nRows + 1)
+  let (_, size) = bounds $ worldData world
+  in size
 
 
 worldInBounds :: World -> (Int, Int) -> Bool
