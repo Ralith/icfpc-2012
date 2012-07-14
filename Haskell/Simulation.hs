@@ -36,7 +36,7 @@ advanceWorld world action =
                         _ -> (noLambdas, robotPosition))
           (True, (0, 0))
           allIndices
-      world2 = advanceRobot world action
+      world2 = advanceRobot world robotPosition action
       circumstances =
         Map.fromList
          $ mapMaybe (\index ->
@@ -64,9 +64,19 @@ advanceWorld world action =
      else Step world3
 
 
-advanceRobot :: World -> Action -> World
-advanceRobot world action =
-  world
+advanceRobot :: World -> (Int, Int) -> Action -> World
+advanceRobot world robotPosition action =
+  let prospectivePosition =
+        case action of
+          MoveAction direction -> applyMovement direction robotPosition
+          _ -> robotPosition
+      priorOccupant = fromMaybe WallCell $ worldCell world prospectivePosition
+      effective = cellEnterable priorOccupant
+  in if effective
+       then mutateWorld world
+                        [(robotPosition, EmptyCell),
+                         (prospectivePosition, RobotCell)]
+       else world
 
 
 advanceWater :: World -> World
