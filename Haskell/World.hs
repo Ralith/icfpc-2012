@@ -21,6 +21,7 @@ import qualified Data.Conduit.Binary as C hiding (lines)
 import qualified Data.Conduit.Text as C
 import qualified Data.Conduit.List as C
 
+
 data World =
   World {
       worldData :: UArray (Int, Int) Word8,

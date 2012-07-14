@@ -1,7 +1,8 @@
-module Planning(planner) where
+module Planning (planner) where
 
 import Prelude hiding (Either(..))
 
+import Control.Monad
 import Data.Conduit
 import qualified Data.Conduit.Binary as C hiding (lines)
 import qualified Data.Conduit.Text as C
@@ -12,14 +13,42 @@ import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
 
+import Simulation
 import World
 
+import Debug.Trace
 
-planner :: World -> Source (ResourceT IO) Action
+
+planner :: (Monad m) => World -> Source m Action
 planner world = do
-  mapM_ (\_ -> yield $ MoveAction Up)
-        [0 .. 100]
-  return ()
+  let allIndices = worldIndices world
+      maybeRobotPosition =
+        foldl' (\soFar index ->
+                  case fromMaybe EmptyCell $ worldCell world index of
+                    RobotCell -> Just index
+                    _ -> soFar)
+               Nothing
+               allIndices
+  fromMaybe (yield AbortAction) $ do
+    robotPosition <- maybeRobotPosition
+    goal <- nextGoal world robotPosition
+    route <- easyRoute world robotPosition goal
+    return $ do
+      maybeWorld <-
+        foldM (\maybeWorld direction -> do
+                 case maybeWorld of
+                   Nothing -> return Nothing
+                   Just world -> do
+                     let action = MoveAction direction
+                     yield action
+                     case advanceWorld world action of
+                       Step newWorld -> return $ Just newWorld
+                       _ -> return Nothing)
+              (Just world)
+              route
+      case maybeWorld of
+        Nothing -> yield AbortAction
+        Just world -> planner world
 
 
 nextGoal :: World -> (Int, Int) -> Maybe (Int, Int)
@@ -56,7 +85,7 @@ easyRoute world startPosition endPosition =
             let (newRoutes, anyChanges) =
                   foldl' considerIndex
                          (routes, False)
-                         (range $ bounds $ worldData world)
+                         (worldIndices world)
             in if anyChanges
               then loop newRoutes
               else Nothing
