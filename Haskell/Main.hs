@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
 module Main (main) where
 
 import Prelude hiding (Either(..))
@@ -133,6 +133,19 @@ readWorld filePath = do
                lines
       width = foldl' (\soFar line -> max soFar (T.length line)) 1 bodyLines
       height = length bodyLines
+      keys = Map.fromList
+               $ map (\line -> let (key, rest) = T.break (\c -> c == ' ') line
+                                   value = T.tail rest
+                               in (key, value))
+                     headerLines
+      floodingLevel =
+        maybe 0 (read . T.unpack) $ Map.lookup "Water" keys
+      floodingTicksPerLevel =
+        maybe 0 (read . T.unpack) $ Map.lookup "Flooding" keys
+      floodingTicks = 0
+      drowningDuration =
+        maybe 10 (read . T.unpack) $ Map.lookup "Waterproof" keys
+      drowningTicks = 0
       associations =
        concat
        $ zipWith (\lineText rowIndex ->
