@@ -264,38 +264,34 @@ advanceWorld world action =
                                        | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
-  in makeWorld size
-      $ map
-          (\index ->
-              (index, 
-               let cell = fromMaybe EmptyCell $ worldCell world index
-               in if cellFalls cell
-                 then let cellBelowEmpty =
-                            fromMaybe False
-                             $ fmap cellIsEmpty
-                             $ worldNearbyCell world index Down
-                      in if cellBelowEmpty
-                           then EmptyCell
-                           else cellAtRest cell
-                 else if cellIsEmpty cell
-                        then fromMaybe cell
-                               $ foldl' (\soFar path ->
-                                           case soFar of
-                                             Nothing ->
-                                               case worldNearbyCell world index
-                                                                    path of
-                                                 Just cellAbove
-                                                   | cellFalls cellAbove ->
-                                                   Just
-                                                    $ cellAfterFalling cellAbove
-                                                 _ -> Nothing
-                                             _ -> soFar)
-                                       Nothing
-                                       [[Up],
-                                        [Up, Left],
-                                        [Up, Right]]
-                        else cell))
-          allIndices
+  in makeWorld size $ map (advanceCell world) allIndices
+
+advanceCell :: World -> (Int, Int) -> ((Int, Int), Cell)
+advanceCell world index =
+  (index,
+   let cell = fromMaybe EmptyCell $ worldCell world index
+   in if cellFalls cell
+      then advanceFallCell world cell index
+      else if cellIsEmpty cell
+           then fromMaybe cell
+                    $ foldl' (\soFar path ->
+                              case soFar of
+                                Nothing ->
+                                    case worldNearbyCell world index path of
+                                      Just cellAbove
+                                          | cellFalls cellAbove ->
+                                              Just $ cellAfterFalling cellAbove
+                                      _ -> Nothing
+                                _ -> soFar)
+                    Nothing [[Up], [Up, Left], [Up, Right]]
+           else cell)
+
+advanceFallCell :: World -> Cell -> (Int, Int) -> Cell
+advanceFallCell world cell index =
+  let cellBelowEmpty = fromMaybe False $ fmap cellIsEmpty $ worldNearbyCell world index Down
+  in if cellBelowEmpty
+     then EmptyCell
+     else cellAtRest cell
 
 
 cellIsEmpty :: Cell -> Bool
