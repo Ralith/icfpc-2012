@@ -110,7 +110,12 @@ easyRoute world startPosition endPosition =
           Nothing ->
             case Map.lookup (applyMovement direction index) newRoutes of
               Nothing -> Nothing
-              Just route -> Just $ route ++ [oppositeDirection direction]
+              Just route ->
+                let prospectiveRoute = route ++ [oppositeDirection direction]
+                    safe = routeIsSafe world startPosition prospectiveRoute
+                in if safe
+                     then Just prospectiveRoute
+                     else Nothing
   in loop $ Map.fromList
           $ mapMaybe (\(index, cell) ->
                         if cell == RobotCell
