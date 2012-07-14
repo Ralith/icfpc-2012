@@ -117,8 +117,17 @@ readWorld filePath = do
              $= C.decode C.ascii
              $= C.lines
              $$ C.consume
-  let width = foldl' (\soFar line -> max soFar (T.length line)) 1 lines
-      height = length lines
+  let (_, bodyLines, headerLines) =
+        foldl' (\(bodyDone, bodySoFar, headerSoFar) line ->
+                   if bodyDone
+                     then (True, bodySoFar, headerSoFar ++ [line])
+                     else if T.null line
+                            then (True, bodySoFar, headerSoFar)
+                            else (False, bodySoFar ++ [line], headerSoFar))
+               (False, [], [])
+               lines
+      width = foldl' (\soFar line -> max soFar (T.length line)) 1 bodyLines
+      height = length bodyLines
       associations =
        concat
        $ zipWith (\lineText rowIndex ->
@@ -131,7 +140,7 @@ readWorld filePath = do
                                                 (repeat ' ')
                              in lineChars ++ padding)
                             [0..])
-                 lines
+                 bodyLines
                  [0..]
   return $ makeWorld (width, height) associations
 
