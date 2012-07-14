@@ -21,16 +21,17 @@ import Debug.Trace
 planner :: (Monad m) => World -> Source m Action
 planner world = do
   let allIndices = worldIndices world
-      maybeRobotPosition =
-        foldl' (\soFar index ->
+      (liftOpen, maybeRobotPosition) =
+        foldl' (\(liftOpen, maybeRobotPosition) index ->
                   case fromMaybe EmptyCell $ worldCell world index of
-                    RobotCell -> Just index
-                    _ -> soFar)
-               Nothing
+                    LambdaCell -> (False, maybeRobotPosition)
+                    RobotCell -> (liftOpen, Just index)
+                    _ -> (liftOpen, maybeRobotPosition))
+               (True, Nothing)
                allIndices
   fromMaybe (yield AbortAction) $ do
     robotPosition <- maybeRobotPosition
-    goal <- nextGoal world robotPosition
+    goal <- nextGoal world liftOpen robotPosition
     route <- easyRoute world robotPosition goal
     return $ do
       maybeWorld <-
@@ -50,14 +51,14 @@ planner world = do
         Just world -> planner world
 
 
-nextGoal :: World -> (Int, Int) -> Maybe (Int, Int)
-nextGoal world startPosition =
+nextGoal :: World -> Bool -> (Int, Int) -> Maybe (Int, Int)
+nextGoal world liftOpen startPosition =
   fmap snd
    $ foldl'
        (\maybeBestSoFar index ->
           let goalHere = case fromMaybe WallCell $ worldCell world index of
                            LambdaCell -> True
-                           LambdaLiftCell True -> True
+                           LambdaLiftCell _ | liftOpen -> True
                            _ -> False
               maybeDistance = fmap length $ easyRoute world startPosition index
           in if goalHere
