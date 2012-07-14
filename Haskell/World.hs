@@ -109,8 +109,8 @@ decodeCell 9 = EmptyCell
 
 worldSize :: World -> (Int, Int)
 worldSize world =
-  let (_, size) = bounds $ worldData world
-  in size
+  let (_, (nColumns, nRows)) = bounds $ worldData world
+  in (nColumns + 1, nRows + 1)
 
 
 worldInBounds :: World -> (Int, Int) -> Bool
@@ -223,8 +223,8 @@ readWorld filePath = do
 
 
 makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
-makeWorldData size associations =
-  array ((0, 0), size)
+makeWorldData (width, height) associations =
+  array ((0, 0), (width - 1, height - 1))
         (map (\(index, cell) -> (index, encodeCell cell)) associations)
 
 
