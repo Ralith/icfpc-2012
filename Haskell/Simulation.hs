@@ -24,15 +24,22 @@ advanceWorld :: World -> Action -> StepResult
 advanceWorld world action =
   let size@(width, height) = worldSize world
       allIndices = worldIndices world
-      (liftOpen, robotPosition) =
-          foldl' (\(liftOpen, robotPosition) index ->
-                      case fromMaybe EmptyCell $ worldCell world index of
-                        LambdaCell -> (False, robotPosition)
-                        RobotCell -> (liftOpen, index)
-                        _ -> (liftOpen, robotPosition))
-          (True, (0, 0))
-          allIndices
+      robotPosition =
+        foldl' (\robotPosition index ->
+                   case fromMaybe EmptyCell $ worldCell world index of
+                     LambdaCell -> robotPosition
+                     RobotCell -> index
+                     _ -> robotPosition)
+               (0, 0)
+               allIndices
       world2 = advanceRobot world robotPosition action
+      liftOpen =
+        foldl' (\liftOpen index ->
+                    case fromMaybe EmptyCell $ worldCell world2 index of
+                      LambdaCell -> False
+                      _ -> liftOpen)
+               True
+               allIndices
       circumstances =
         Map.fromList
          $ mapMaybe (\index ->
