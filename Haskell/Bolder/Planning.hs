@@ -19,6 +19,7 @@ import Bolder.World
 
 import Debug.Trace
 
+
 planner :: (Monad m) => World -> Source m Action
 planner world = do
   let allIndices = worldIndices world
@@ -51,7 +52,7 @@ planner world = do
         Just world -> planner world
 
 
-nextRoute :: World -> Bool -> (Int, Int) -> Maybe [Direction]
+nextRoute :: World -> Bool -> Location -> Maybe [Direction]
 nextRoute world liftOpen startPosition =
   fmap fst
    $ foldl'
@@ -79,9 +80,9 @@ nextRoute world liftOpen startPosition =
       (worldIndices world)
 
 
-easyRoute :: World -> (Int, Int) -> (Int, Int) -> Maybe [Direction]
+easyRoute :: World -> Location -> Location -> Maybe [Direction]
 easyRoute world startPosition endPosition =
-  let loop :: Map (Int, Int) [Direction] -> Maybe [Direction]
+  let loop :: Map Location [Direction] -> Maybe [Direction]
       loop routes =
         case Map.lookup endPosition routes of
           result@(Just _) -> result
@@ -124,7 +125,7 @@ easyRoute world startPosition endPosition =
                      (worldToList world)
 
 
-routeIsSafe :: World -> (Int, Int) -> [Direction] -> Bool
+routeIsSafe :: World -> Location -> [Direction] -> Bool
 routeIsSafe world robotPosition [] =
   not $ deadly world robotPosition
 routeIsSafe world robotPosition (direction:rest) =
@@ -137,7 +138,7 @@ routeIsSafe world robotPosition (direction:rest) =
            _ -> False
 
 
-deadly :: World -> (Int,Int) -> Bool
+deadly :: World -> Location -> Bool
 deadly world position
     | robotDrowned world = True
     | Just RockCell{} <- worldNearbyCell world position Up
