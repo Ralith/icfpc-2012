@@ -18,7 +18,6 @@ import World
 
 import Debug.Trace
 
-
 planner :: (Monad m) => World -> Source m Action
 planner world = do
   let allIndices = worldIndices world
