@@ -324,37 +324,45 @@ advanceWorld world action =
                     columnIndex <- [0 .. width - 1],
                     rowIndex <- [0 .. height - 1]]
       --This is something worth testing
-      (liftOpen, robotPos) =
-          foldl' (\(noLambdas, robotPos) index ->
+      (liftOpen, robotPosition) =
+          foldl' (\(noLambdas, robotPosition) index ->
                       case fromMaybe EmptyCell $ worldCell world index of
-                        LambdaCell -> (False, robotPos)
+                        LambdaCell -> (False, robotPosition)
                         RobotCell -> (noLambdas, index)
-                        _ -> (noLambdas, robotPos))
-          (True, undefined)
+                        _ -> (noLambdas, robotPosition))
+          (True, (0, 0))
           allIndices
+      world2 = advanceRobot world action
       circumstances =
         Map.fromList
          $ mapMaybe (\index ->
                        let isEmpty path =
                              maybe False cellIsEmpty
-                                   $ worldNearbyCell world index path
+                                   $ worldNearbyCell world2 index path
                        in fmap (\circumstance -> (index, circumstance))
                             $ case fromMaybe EmptyCell
-                                     $ worldCell world index of
+                                     $ worldCell world2 index of
                                 cell | cellFalls cell ->
                                   case () of
                                     () | isEmpty [Down] -> Just FallingDown
                                        | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
-      newWorld =
-          advanceWater $ world { worldData = makeWorldData size $
-                                             map (advanceCell world) allIndices,
-                                 worldTicks = 1 + worldTicks world
-                               }
+      world3 =
+        advanceWater
+          $ world2 {
+                worldData = makeWorldData size
+                              $ map (advanceCell world2) allIndices,
+                worldTicks = 1 + worldTicks world2
+              }
   in if robotDrowned newWorld
      then LossDrowned
      else Step newWorld
+
+
+advanceRobot :: World -> Action -> World
+advanceRobot world action =
+  world
 
 
 advanceWater :: World -> World
