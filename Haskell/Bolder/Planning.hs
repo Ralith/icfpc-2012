@@ -19,6 +19,17 @@ import Bolder.World
 
 import Debug.Trace
 
+data Problem
+  = BoulderInTheWayProblem Location
+  deriving (Eq, Ord)
+
+
+data Route =
+  Route {
+      routeDirections :: [Direction],
+      routeProblems :: [Problem]
+    }
+
 
 planner :: (Monad m) => World -> Source m Action
 planner world = do
@@ -46,15 +57,15 @@ planner world = do
                        Step newWorld -> return $ Just newWorld
                        _ -> return Nothing)
               (Just world)
-              route
+              (routeDirections route)
       case maybeWorld of
         Nothing -> yield AbortAction
         Just world -> planner world
 
 
-nextRoute :: World -> Bool -> Location -> Maybe [Direction]
+nextRoute :: World -> Bool -> Location -> Maybe Route
 nextRoute world liftOpen startPosition =
-  fmap fst
+  fmap (\(route, _, _) -> route)
    $ foldl'
        (\maybeBestSoFar index ->
           let goalHere = case fromMaybe WallCell $ worldCell world index of
@@ -64,25 +75,29 @@ nextRoute world liftOpen startPosition =
               candidate = easyRoute world startPosition index >>=
                           (\route ->
                              if routeIsSafe world startPosition route
-                               then Just (route, length route)
+                               then Just (route,
+                                          routeLength world route,
+                                          routeDifficulty world route)
                                else Nothing)
           in if goalHere
                then case maybeBestSoFar of
                       Nothing -> candidate
-                      Just (bestRoute, bestDistance) ->
+                      Just (bestRoute, bestDistance, bestDifficulty) ->
                         case candidate of
                           Nothing -> maybeBestSoFar
-                          Just (route, distance)
-                            | distance < bestDistance -> candidate
+                          Just (route, distance, difficulty)
+                            | difficulty < bestDifficulty -> candidate
+                            | (difficulty == bestDifficulty)
+                              && (distance < bestDistance) -> candidate
                             | otherwise -> maybeBestSoFar
                else maybeBestSoFar)
       Nothing
       (worldIndices world)
 
 
-easyRoute :: World -> Location -> Location -> Maybe [Direction]
+easyRoute :: World -> Location -> Location -> Maybe Route
 easyRoute world startPosition endPosition =
-  let loop :: Map Location [Direction] -> Maybe [Direction]
+  let loop :: Map Location Route -> Maybe Route
       loop routes =
         case Map.lookup endPosition routes of
           result@(Just _) -> result
@@ -94,6 +109,9 @@ easyRoute world startPosition endPosition =
             in if anyChanges
               then loop newRoutes
               else Nothing
+      considerIndex
+        :: (Map Location Route, Bool) -> Location
+        -> (Map Location Route, Bool)
       considerIndex (newRoutes, anyChanges) index =
         let noChange = (newRoutes, anyChanges)
             reachableBy directions =
@@ -109,6 +127,9 @@ easyRoute world startPosition endPosition =
                           Nothing -> noChange
                           Just route -> reachableBy route
                       | otherwise -> noChange
+      considerDirection
+        :: Map Location Route -> Location
+        -> Maybe Route -> Direction -> Maybe Route
       considerDirection newRoutes index maybeRoute direction =
         case maybeRoute of
           Just _ -> maybeRoute
@@ -116,26 +137,31 @@ easyRoute world startPosition endPosition =
             let adjacentIndex = applyMovement direction index
             in case Map.lookup adjacentIndex newRoutes of
                  Nothing -> Nothing
-                 Just route -> Just $ route ++ [oppositeDirection direction]
+                 Just route ->
+                   Just $ appendToRoute route (oppositeDirection direction)
   in loop $ Map.fromList
           $ mapMaybe (\(index, cell) ->
                         if cell == RobotCell
-                          then Just (index, [])
+                          then Just (index, emptyRoute)
                           else Nothing)
                      (worldToList world)
 
 
-routeIsSafe :: World -> Location -> [Direction] -> Bool
-routeIsSafe world robotPosition [] =
-  not $ deadly world robotPosition
-routeIsSafe world robotPosition (direction:rest) =
-  if deadly world robotPosition
-    then False
-    else case advanceWorld' world $ MoveAction direction of
-           Step newWorld ->
-             routeIsSafe world (applyMovement direction robotPosition) rest
-           Win _ -> True
-           _ -> False
+routeIsSafe :: World -> Location -> Route -> Bool
+routeIsSafe world robotPosition route =
+  let directionsAreSafe world robotPosition [] =
+        not $ deadly world robotPosition
+      directionsAreSafe world robotPosition (direction:rest) =
+        if deadly world robotPosition
+          then False
+          else case advanceWorld' world $ MoveAction direction of
+                 Step newWorld ->
+                   directionsAreSafe newWorld
+                                     (applyMovement direction robotPosition)
+                                     rest
+                 Win _ -> True
+                 _ -> False
+  in directionsAreSafe world robotPosition (routeDirections route)
 
 
 deadly :: World -> Location -> Bool
@@ -158,3 +184,37 @@ boulderMovable :: World -> (Int,Int) -> [Direction] -> Bool
 boulderMovable world pos dir
     | Just cell <- worldNearbyCell world pos dir, cellIsEmpty cell = True
     | otherwise = False
+
+
+emptyRoute :: Route
+emptyRoute =
+  Route {
+      routeDirections = [],
+      routeProblems = []
+    }
+
+
+appendToRoute :: Route -> Direction -> Route
+appendToRoute route direction =
+  route {
+      routeDirections = routeDirections route ++ [direction]
+    }
+
+
+addProblemToRoute :: Route -> Problem -> Route
+addProblemToRoute route problem =
+  route {
+      routeProblems = routeProblems route ++ [problem]
+    }
+
+
+routeLength :: World -> Route -> Int
+routeLength world route =
+  length $ routeDirections route
+
+
+routeDifficulty :: World -> Route -> Int
+routeDifficulty world route =
+  if null $ routeProblems route
+    then 0
+    else 1
