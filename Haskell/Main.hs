@@ -22,7 +22,12 @@ import System.Posix.Unistd
 
 data World =
   World {
-      worldData :: UArray (Int, Int) Word8
+      worldData :: UArray (Int, Int) Word8,
+      worldFloodingLevel :: Int,
+      worldFloodingTicksPerLevel :: Int,
+      worldFloodingTicks :: Int,
+      worldDrowningDuration :: Int,
+      worldDrowningTicks :: Int
     }
 
 
@@ -151,7 +156,12 @@ makeWorld size associations =
                       (map (\(index, cell) -> (index, encodeCell cell))
                            associations)
   in World {
-         worldData = worldData
+         worldData = worldData,
+         worldFloodingLevel = 0,
+         worldFloodingTicksPerLevel = 0,
+         worldFloodingTicks = 0,
+         worldDrowningDuration = 0,
+         worldDrowningTicks = 0
        }
 
 
