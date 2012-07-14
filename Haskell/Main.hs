@@ -13,16 +13,19 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe hiding (fromJust)
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
 import System.Environment
 import System.Exit
+import System.IO
 import System.Posix.Unistd
 
 
 data World =
   World {
       worldData :: UArray (Int, Int) Word8,
+      worldTicks :: Int,
       worldFloodingLevel :: Int,
       worldFloodingTicksPerLevel :: Int,
       worldFloodingTicks :: Int,
@@ -87,13 +90,13 @@ main = do
   case parameters of
     [worldFilePath] -> do
       world <- readWorld worldFilePath
-      visualize world
+      visualize world []
       world <- runResourceT
                  $ planner world
                  $= slower
                  $$ C.foldM (\world action -> do
                              let world' = advanceWorld world action
-                             lift $ visualize world'
+                             lift $ visualize world' []
                              return world')
                             world
       exitSuccess
@@ -162,6 +165,7 @@ readWorld filePath = do
                  [0..]
   return $ World {
                worldData = makeWorldData (width, height) associations,
+               worldTicks = 0,
                worldFloodingLevel = floodingLevel,
                worldFloodingTicksPerLevel = floodingTicksPerLevel,
                worldFloodingTicks = floodingTicks,
@@ -240,8 +244,8 @@ worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
 
 
-visualize :: World -> IO ()
-visualize world = do
+visualize :: World -> [Text] -> IO ()
+visualize world debugInformation = do
   let (width, height) = worldSize world
       water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
@@ -269,6 +273,16 @@ visualize world = do
            putStr "\n")
         [0 .. height - 1]
   putStr "\x1B[m"
+  let informationStartColumn = min 20 (width + 2)
+  mapM_ (\(lineIndex, line) -> do
+            putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
+                     ++ (show informationStartColumn) ++ "f"
+                     ++ (T.unpack line))
+        (zip [2 ..]
+             ((T.pack $ (show $ worldTicks world) ++ " ticks")
+              : debugInformation))
+  putStr $ "\x1B[" ++ (show $ height + 2) ++ ";1f"
+  hFlush stdout
 
 
 advanceWorld :: World -> Action -> World
@@ -301,7 +315,8 @@ advanceWorld world action =
                                        | otherwise -> Nothing)
                     allIndices
   in world {
-         worldData = makeWorldData size $ map (advanceCell world) allIndices
+         worldData = makeWorldData size $ map (advanceCell world) allIndices,
+         worldTicks = 1 + worldTicks world
        }
 
 
