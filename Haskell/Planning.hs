@@ -142,3 +142,18 @@ easyRoute world startPosition endPosition =
                           then Just (index, [])
                           else Nothing)
                      (worldToList world)
+
+
+routeIsSafe :: World -> (Int, Int) -> [Direction] -> Bool
+routeIsSafe world robotPosition [] = True
+routeIsSafe world robotPosition (direction:rest) =
+  if imminentDanger world robotPosition
+    then False
+    else case advanceWorld world $ MoveAction direction of
+           Step newWorld ->
+             routeIsSafe world (applyMovement direction robotPosition) rest
+           _ -> False
+
+
+imminentDanger :: World -> (Int, Int) -> Bool
+imminentDanger world robotPosition = False

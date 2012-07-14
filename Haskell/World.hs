@@ -4,7 +4,7 @@ module World
      oppositeDirection, applyMovement,
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
-     robotSubmerged, robotDrowned,
+     robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellIsEmpty)
     where
@@ -113,10 +113,10 @@ worldSize world =
 worldInBounds :: World -> (Int, Int) -> Bool
 worldInBounds world (columnIndex, rowIndex) =
   let (width, height) = worldSize world
-  in (columnIndex >= 0)
-     && (columnIndex < width)
-     && (rowIndex >= 0)
-     && (rowIndex < height)
+  in (columnIndex >= 1)
+     && (columnIndex <= width)
+     && (rowIndex >= 1)
+     && (rowIndex <= height)
 
 
 worldCell :: World -> (Int, Int) -> Maybe Cell
@@ -136,8 +136,8 @@ worldIndices :: World -> [(Int, Int)]
 worldIndices world =
   let (width, height) = worldSize world
   in [(columnIndex, rowIndex) |
-      rowIndex <- [0 .. height - 1],
-      columnIndex <- [0 .. width - 1]]
+      rowIndex <- [1 .. height],
+      columnIndex <- [1 .. width]]
 -- This is something worth testing
 
 
@@ -145,19 +145,6 @@ worldToList :: World -> [((Int, Int), Cell)]
 worldToList world =
   map (\(index, encodedCell) -> (index, decodeCell encodedCell))
       (assocs $ worldData world)
-
-
-robotSubmerged :: World -> Bool
-robotSubmerged world =
-    let (width, _) = worldSize world
-    in any (\cell ->
-                case cell of
-                  Just RobotCell -> True
-                  _ -> False) $
-    concatMap (\rowIndex ->
-               map (\columnIndex -> worldCell world (columnIndex, rowIndex))
-                   [0 .. width - 1])
-              [0 .. worldFloodingLevel world - 1]
 
 
 robotDrowned :: World -> Bool
@@ -202,9 +189,9 @@ parseWorld text  =
                                  padding = take (width - lineWidth)
                                                 (repeat ' ')
                              in lineChars ++ padding)
-                            [0..])
+                            [1..])
                  bodyLines
-                 [0..]
+                 [1..]
   in World { worldData = makeWorldData (width, height) associations,
              worldTicks = 0,
              worldFloodingLevel = floodingLevel,
@@ -218,7 +205,7 @@ parseWorld text  =
 
 makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
 makeWorldData (width, height) associations =
-  array ((0, 0), (width - 1, height - 1))
+  array ((1, 1), (width, height))
         (map (\(index, cell) -> (index, encodeCell cell)) associations)
 
 
