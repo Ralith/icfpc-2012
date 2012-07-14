@@ -354,7 +354,6 @@ advanceWater world =
                else worldFloodingLevel world,
            worldFloodingTicks =
              (worldFloodingTicks world + 1) * (1 - floodValue),
-           worldDrowningDuration = 0,
            worldDrowningTicks =
              if robotSubmerged world
                then 1 + worldDrowningTicks world
