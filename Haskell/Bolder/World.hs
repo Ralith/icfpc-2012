@@ -33,7 +33,8 @@ data World =
       worldFloodingTicks :: Int,
       worldDrowningDuration :: Int,
       worldDrowningTicks :: Int,
-      worldLambdasCollected :: Int
+      worldLambdasCollected :: Int,
+      worldTrampolines :: Map.Map Location Location
     }
     deriving (Show, Eq)
 
@@ -53,6 +54,8 @@ data Cell
   | LambdaLiftCell Bool
   | EarthCell
   | EmptyCell
+  | TrampolineCell
+  | TargetCell
   deriving (Eq, Ord, Show)
 
 
@@ -110,18 +113,22 @@ encodeCell (LambdaLiftCell False) = 6
 encodeCell (LambdaLiftCell True)  = 7
 encodeCell EarthCell              = 8
 encodeCell EmptyCell              = 9
+encodeCell TrampolineCell         = 10
+encodeCell TargetCell             = 11
 
 
 decodeCell :: Word8 -> Cell
-decodeCell 1 = RobotCell
-decodeCell 2 = WallCell
-decodeCell 3 = RockCell False
-decodeCell 4 = RockCell True
-decodeCell 5 = LambdaCell
-decodeCell 6 = LambdaLiftCell False
-decodeCell 7 = LambdaLiftCell True
-decodeCell 8 = EarthCell
-decodeCell 9 = EmptyCell
+decodeCell 1  = RobotCell
+decodeCell 2  = WallCell
+decodeCell 3  = RockCell False
+decodeCell 4  = RockCell True
+decodeCell 5  = LambdaCell
+decodeCell 6  = LambdaLiftCell False
+decodeCell 7  = LambdaLiftCell True
+decodeCell 8  = EarthCell
+decodeCell 9  = EmptyCell
+decodeCell 10 = TrampolineCell
+decodeCell 11 = TargetCell
 decodeCell x = error $ "decodeCell " ++ show x ++ " is not a valid option"
 
 
@@ -219,7 +226,8 @@ parseWorld text  =
              worldFloodingTicks = floodingTicks,
              worldDrowningDuration = drowningDuration,
              worldDrowningTicks = drowningTicks,
-             worldLambdasCollected = 0
+             worldLambdasCollected = 0,
+             worldTrampolines = Map.empty
            }
 
 
@@ -247,7 +255,9 @@ readCell 'L'  = LambdaLiftCell False
 readCell 'O'  = LambdaLiftCell True
 readCell '.'  = EarthCell
 readCell ' '  = EmptyCell
-readCell _    = WallCell
+readCell c | elem c ['A'..'I'] = TrampolineCell
+           | elem c ['1'..'9'] = TargetCell
+           | otherwise         = WallCell
 
 
 cellEnterable :: Cell -> Bool
