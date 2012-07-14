@@ -55,6 +55,9 @@ advanceWorld world action =
                 worldTicks = 1 + worldTicks world2
               }
       robotCrushed = Just (RockCell True) == worldNearbyCell world3 robotPosition Up
+        || action == MoveAction Down
+        && cellFalls (fromMaybe EmptyCell (worldNearbyCell world2 robotPosition Up))
+
   in if action == AbortAction
      then Abort
      else if robotDrowned world3
