@@ -16,6 +16,7 @@ import Control.Monad
 import Data.Array.Unboxed
 import Data.Word
 import Data.Maybe
+import Data.Tuple
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
@@ -197,18 +198,18 @@ parseWorld text  =
                lines
       width = foldl' (\soFar line -> max soFar (T.length line)) 1 bodyLines
       height = length bodyLines
-      keys = Map.fromList
+      keys = Map.fromListWith (++)
                $ map (\line -> let (key, rest) = T.break (\c -> c == ' ') line
                                    value = T.tail rest
-                               in (key, value))
+                               in (key, [value]))
                      headerLines
       floodingLevel =
-        maybe 0 (read . T.unpack) $ Map.lookup "Water" keys
+        maybe 0 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Water" keys
       floodingTicksPerLevel =
-        maybe 0 (read . T.unpack) $ Map.lookup "Flooding" keys
+        maybe 0 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Flooding" keys
       floodingTicks = 0
       drowningDuration =
-        maybe 10 (read . T.unpack) $ Map.lookup "Waterproof" keys
+        maybe 10 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Waterproof" keys
       drowningTicks = 0
       associations =
        concat
@@ -224,6 +225,17 @@ parseWorld text  =
                             [1..])
                  bodyLines
                  [0..]
+      (trampolines, targets) =
+          foldl' (\prev@(trampmap, targmap) link -> fromMaybe prev $
+                  do let [tramp, targ] = map (flip T.index 0) $ T.splitOn " targets " link
+                         locations = map swap associations
+                     trampId <- findIndex (== tramp) ['A'..'I']
+                     trampLoc <- lookup (TrampolineCell trampId) locations
+                     targId <- findIndex (== targ) ['1'..'9']
+                     targLoc <- lookup (TargetCell targId) locations
+                     return (Map.insert          trampId targLoc    trampmap,
+                             Map.insertWith (++) targId  [trampLoc] targmap))
+                 (Map.empty, Map.empty) $ fromMaybe [] $ Map.lookup "Trampoline" keys
   in World { worldData = makeWorldData (width, height) associations,
              worldTicks = 0,
              worldFloodingLevel = floodingLevel,
@@ -232,12 +244,12 @@ parseWorld text  =
              worldDrowningDuration = drowningDuration,
              worldDrowningTicks = drowningTicks,
              worldLambdasCollected = 0,
-             worldTrampolines = Map.empty,
-             worldTargets = Map.empty
+             worldTrampolines = trampolines,
+             worldTargets = targets
            }
 
 
-makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
+makeWorldData :: (Int, Int) -> [(Location, Cell)] -> UArray (Int, Int) Word8
 makeWorldData (width, height) associations =
   array ((1, 1), (width, height))
         (map (\(index, cell) -> (index, encodeCell cell)) associations)
