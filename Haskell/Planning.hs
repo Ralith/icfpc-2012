@@ -59,8 +59,8 @@ easyRoute world startPosition endPosition =
               Nothing -> Nothing
               Just route -> Just $ route ++ [oppositeDirection direction]
   in loop $ Map.fromList
-          $ mapMaybe (\(index, encodedCell) ->
-                        if decodeCell encodedCell == RobotCell
+          $ mapMaybe (\(index, cell) ->
+                        if cell == RobotCell
                           then Just (index, [])
                           else Nothing)
-                     (assocs $ worldData world)
+                     (worldToList world)

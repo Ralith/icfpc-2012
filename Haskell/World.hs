@@ -2,9 +2,9 @@
 module World
     (World(..), Cell(..), Action(..), Direction(..),
      oppositeDirection, applyMovement,
-     worldSize, worldInBounds, worldCell, worldNearbyCell, decodeCell,
+     worldSize, worldInBounds, worldCell, worldNearbyCell, worldToList,
      robotSubmerged, robotDrowned,
-     readWorld, makeWorldData,
+     readWorld, makeWorldData, mutateWorld,
      cellEnterable, cellIsEmpty)
     where
 
@@ -132,6 +132,13 @@ worldNearbyCell
 worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
 
+
+worldToList :: World -> [((Int, Int), Cell)]
+worldToList world =
+  map (\(index, encodedCell) -> (index, decodeCell encodedCell))
+      (assocs $ worldData world)
+
+
 robotSubmerged :: World -> Bool
 robotSubmerged world =
     let (width, _) = worldSize world
@@ -208,6 +215,15 @@ makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
 makeWorldData size associations =
   array ((0, 0), size)
         (map (\(index, cell) -> (index, encodeCell cell)) associations)
+
+
+mutateWorld :: World -> [((Int, Int), Cell)] -> World
+mutateWorld world mutations =
+  world {
+      worldData = worldData world
+                  // map (\(index, cell) -> (index, encodeCell cell))
+                         mutations
+    }
 
 
 readCell :: Char -> Cell
