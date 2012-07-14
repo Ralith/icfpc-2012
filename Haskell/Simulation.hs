@@ -30,7 +30,7 @@ advanceWorld world action =
                      LambdaCell -> robotPosition
                      RobotCell -> index
                      _ -> robotPosition)
-               (0, 0)
+               (1, 1)
                allIndices
       world2 = advanceRobot world robotPosition action
       liftOpen =
@@ -106,7 +106,7 @@ advanceWater robotAltitude world =
            worldFloodingTicks =
              (worldFloodingTicks world + 1) * (1 - floodValue),
            worldDrowningTicks =
-             if robotAltitude <= worldFloodingLevel world - 1
+             if robotAltitude <= worldFloodingLevel world
                then 1 + worldDrowningTicks world
                else 0
          }

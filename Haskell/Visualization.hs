@@ -31,9 +31,9 @@ visualize world debugInformation = do
                           EmptyCell -> "\x1B[22;" ++ background ++ "m "
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
-                 [0 .. width - 1]
+                 [1 .. width]
            putStr "\n")
-        [height - 1, height - 2 .. 0]
+        [height, height - 1 .. 1]
   putStr "\x1B[m"
   let informationStartColumn = width + 2
   mapM_ (\(lineIndex, line) -> do
