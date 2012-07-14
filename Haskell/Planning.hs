@@ -22,6 +22,30 @@ planner world = do
   return ()
 
 
+nextGoal :: World -> (Int, Int) -> Maybe (Int, Int)
+nextGoal world startPosition =
+  fmap snd
+   $ foldl'
+       (\maybeBestSoFar index ->
+          let goalHere = case fromMaybe WallCell $ worldCell world index of
+                           LambdaCell -> True
+                           LambdaLiftCell True -> True
+                           _ -> False
+              maybeDistance = fmap length $ easyRoute world startPosition index
+          in if goalHere
+               then case maybeBestSoFar of
+                      Nothing -> Just (fromMaybe 0 maybeDistance, index)
+                      Just (bestDistance, bestGoal) ->
+                        case maybeDistance of
+                          Nothing -> maybeBestSoFar
+                          Just distance
+                            | distance < bestDistance -> Just (distance, index)
+                            | otherwise -> maybeBestSoFar
+               else maybeBestSoFar)
+      Nothing
+      (worldIndices world)
+
+
 easyRoute :: World -> (Int, Int) -> (Int, Int) -> Maybe [Direction]
 easyRoute world startPosition endPosition =
   let loop :: Map (Int, Int) [Direction] -> Maybe [Direction]

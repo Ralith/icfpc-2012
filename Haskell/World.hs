@@ -2,7 +2,8 @@
 module World
     (World(..), Cell(..), Action(..), Direction(..),
      oppositeDirection, applyMovement,
-     worldSize, worldInBounds, worldCell, worldNearbyCell, worldToList,
+     worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
+     worldToList,
      robotSubmerged, robotDrowned,
      readWorld, makeWorldData, mutateWorld,
      cellEnterable, cellIsEmpty)
@@ -131,6 +132,15 @@ worldNearbyCell
   :: (Movement movement) => World -> (Int, Int) -> movement -> Maybe Cell
 worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
+
+
+worldIndices :: World -> [(Int, Int)]
+worldIndices world =
+  let (width, height) = worldSize world
+  in [(columnIndex, rowIndex) |
+      columnIndex <- [0 .. width - 1],
+      rowIndex <- [0 .. height - 1]]
+-- This is something worth testing
 
 
 worldToList :: World -> [((Int, Int), Cell)]
