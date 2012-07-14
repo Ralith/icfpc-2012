@@ -108,26 +108,46 @@ advanceCell world index =
                                     case worldNearbyCell world index path of
                                       Just cellAbove
                                           | cellFalls cellAbove
-                                          , fallPossible world
+                                          , fallPossible world (Just path)
                                                 (applyMovement path index) ->
                                               Just $ cellAfterFalling cellAbove
                                       _ -> Nothing)
                     Nothing [[Up], [Up, Left], [Up, Right]]
            else cell)
 
-fallPossible :: World -> (Int,Int) -> Bool
-fallPossible world index = any (== Just EmptyCell)
-                         $ map (worldNearbyCell world index) possibleDirections
+fallPossible :: World -> Maybe [Direction] -> (Int,Int) -> Bool
+fallPossible world path index = case worldNearbyCell world index Down of
+    Just LambdaCell
+        | Just EmptyCell <- worldNearbyCell world index [Down,Right]
+        -> True
+
+    Just EmptyCell
+        | Just EmptyCell <- worldNearbyCell world index Down
+        -> True
+
+    Just RockCell{}
+        | Just [Up,Right] <- path, rockMovesLeft, rockMovesRight
+        -> False
+        | rockMovesRight || rockMovesLeft -> True
+
+    _otherwise      -> False
+
   where
-    possibleDirections = case worldNearbyCell world index Down of
-        Just LambdaCell -> [[Down,Right]]
-        Just EmptyCell  -> [[Down]]
-        Just RockCell{} -> [[Down],[Down,Right],[Down,Left]]
-        _otherwise      -> []
+    rockMovesLeft
+        | Just EmptyCell <- worldNearbyCell world index Left
+        , Just EmptyCell <- worldNearbyCell world index [Down,Left]
+        = True
+        | otherwise = False
+
+    rockMovesRight
+        | Just EmptyCell <- worldNearbyCell world index Right
+        , Just EmptyCell <- worldNearbyCell world index [Down,Right]
+        = True
+        | otherwise = False
 
 advanceFallCell :: World -> Cell -> (Int, Int) -> Cell
 advanceFallCell world cell index =
-  if fallPossible world index then EmptyCell else cellAtRest cell
+  if fallPossible world Nothing index then EmptyCell else cellAtRest cell
 
 
 cellFalls :: Cell -> Bool
