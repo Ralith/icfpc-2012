@@ -243,20 +243,26 @@ worldNearbyCell world index movement =
 visualize :: World -> IO ()
 visualize world = do
   let (width, height) = worldSize world
+      water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
   mapM_ (\rowIndex -> do
+           let underwater = height - (rowIndex + 1) < water
+               background = if underwater then "44" else "40"
+               earthBackground = if underwater then "46" else "43"
            mapM_ (\columnIndex -> do
                     putStr
                       $ case fromMaybe WallCell
                                $ worldCell world (columnIndex, rowIndex) of
-                          RobotCell -> "\x1B[22;40;36m@"
+                          RobotCell -> "\x1B[22;" ++ background ++ ";36m@"
                           WallCell -> "\x1B[22;47m "
-                          RockCell _ -> "\x1B[22;40;37m●"
-                          LambdaCell -> "\x1B[22;40;33mλ"
-                          LambdaLiftCell False -> "\x1B[22;40;37m◫"
-                          LambdaLiftCell True -> "\x1B[22;40;33m◫"
-                          EarthCell -> "\x1B[22;43m "
-                          EmptyCell -> "\x1B[22;40m "
+                          RockCell _ -> "\x1B[22;" ++ background ++ ";37m●"
+                          LambdaCell -> "\x1B[22;" ++ background ++ ";33mλ"
+                          LambdaLiftCell False ->
+                            "\x1B[22;" ++ background ++ ";37m◫"
+                          LambdaLiftCell True ->
+                            "\x1B[22;" ++ background ++ ";33m◫"
+                          EarthCell -> "\x1B[22;" ++ earthBackground ++ "m "
+                          EmptyCell -> "\x1B[22;" ++ background ++ "m "
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
                  [0 .. width - 1]
