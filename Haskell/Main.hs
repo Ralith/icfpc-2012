@@ -57,10 +57,10 @@ class Movement movement where
 
 
 instance Movement Direction where
-  applyMovement Left (x, y) = (x - 1, y)
+  applyMovement Left  (x, y) = (x - 1, y)
   applyMovement Right (x, y) = (x + 1, y)
-  applyMovement Up (x, y) = (x, y - 1)
-  applyMovement Down (x, y) = (x, y + 1)
+  applyMovement Up    (x, y) = (x, y - 1)
+  applyMovement Down  (x, y) = (x, y + 1)
 
 
 instance Movement [Direction] where
@@ -99,7 +99,7 @@ main = do
 
 slower :: Conduit a (ResourceT IO) a
 slower = do
-  liftIO $ usleep 200000
+  liftIO $ usleep 2000000
   maybeItem <- await
   case maybeItem of
     Just item -> do
@@ -238,9 +238,11 @@ visualize world = do
 advanceWorld :: World -> Action -> World
 advanceWorld world action =
   let size@(width, height) = worldSize world
+      --
       allIndices = [(columnIndex, rowIndex) |
                     columnIndex <- [0 .. width - 1],
                     rowIndex <- [0 .. height - 1]]
+      --This is something worth testing
       liftOpen = foldl' (\soFar index ->
                            case fromMaybe EmptyCell $ worldCell world index of
                              LambdaCell -> False
@@ -260,7 +262,7 @@ advanceWorld world action =
                                   case () of
                                     () | isEmpty [Down] -> Just FallingDown
                                        | otherwise -> Nothing
-                                     | otherwise -> Nothing)
+                                       | otherwise -> Nothing)
                     allIndices
   in makeWorld size
       $ map

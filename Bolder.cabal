@@ -15,4 +15,15 @@ Executable bolder
                  resourcet >= 0.3.2.1 && < 1,
                  unix >= 2.5.1.0 && < 3
   default-language: Haskell2010
+  
+test-suite tests
+ hs-source-dirs:  Haskell, tests
+ type:            exitcode-stdio-1.0
+ main-is:         Tests.hs
+ build-depends:   base >= 3 && < 5,
+                  HUnit >= 1.2 && < 1.3,
+                  test-framework-quickcheck2 >= 0.2 && < 0.3,
+                  test-framework-hunit >= 0.2 && < 0.3,
+                  test-framework >= 0.6 && < 0.7,
+                  QuickCheck >= 2.4 && < 2.5
 
