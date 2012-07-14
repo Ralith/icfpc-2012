@@ -31,8 +31,7 @@ planner world = do
                allIndices
   fromMaybe (yield AbortAction) $ do
     robotPosition <- maybeRobotPosition
-    goal <- nextGoal world liftOpen robotPosition
-    route <- easyRoute world robotPosition goal
+    route <- nextRoute world liftOpen robotPosition
     return $ do
       maybeWorld <-
         foldM (\maybeWorld direction -> do
@@ -51,24 +50,25 @@ planner world = do
         Just world -> planner world
 
 
-nextGoal :: World -> Bool -> (Int, Int) -> Maybe (Int, Int)
-nextGoal world liftOpen startPosition =
-  fmap snd
+nextRoute :: World -> Bool -> (Int, Int) -> Maybe [Direction]
+nextRoute world liftOpen startPosition =
+  fmap fst
    $ foldl'
        (\maybeBestSoFar index ->
           let goalHere = case fromMaybe WallCell $ worldCell world index of
                            LambdaCell -> True
                            LambdaLiftCell _ | liftOpen -> True
                            _ -> False
-              maybeDistance = fmap length $ easyRoute world startPosition index
+              candidate = easyRoute world startPosition index >>=
+                          (\route -> Just (route, length route))
           in if goalHere
                then case maybeBestSoFar of
-                      Nothing -> Just (fromMaybe 0 maybeDistance, index)
-                      Just (bestDistance, bestGoal) ->
-                        case maybeDistance of
+                      Nothing -> candidate
+                      Just (bestRoute, bestDistance) ->
+                        case candidate of
                           Nothing -> maybeBestSoFar
-                          Just distance
-                            | distance < bestDistance -> Just (distance, index)
+                          Just (route, distance)
+                            | distance < bestDistance -> candidate
                             | otherwise -> maybeBestSoFar
                else maybeBestSoFar)
       Nothing
