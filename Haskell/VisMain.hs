@@ -6,6 +6,7 @@ import Data.Conduit
 import qualified Data.Conduit.Binary as C hiding (lines)
 import qualified Data.Conduit.Text as C
 import qualified Data.Conduit.List as C
+import qualified Data.Text as T
 import System.IO
 import System.Environment
 import System.Exit
@@ -15,6 +16,11 @@ import World
 import Visualization
 import Simulation
 import Planning
+
+
+readWorld :: FilePath -> IO World
+readWorld filePath = readFile filePath >>= return . parseWorld . T.pack
+
 
 main :: IO ()
 main = do
