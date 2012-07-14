@@ -77,10 +77,10 @@ nextGoal world liftOpen startPosition =
 
 easyRoute :: World -> (Int, Int) -> (Int, Int) -> Maybe [Direction]
 easyRoute world startPosition endPosition =
-  let loop :: Map (Int, Int) [Direction] -> Maybe [Direction]
+  let loop :: Map (Int, Int) ([Direction], World) -> Maybe [Direction]
       loop routes =
         case Map.lookup endPosition routes of
-          result@(Just _) -> result
+          result@(Just (route, _)) -> Just route
           Nothing ->
             let (newRoutes, anyChanges) =
                   foldl' considerIndex
@@ -108,18 +108,23 @@ easyRoute world startPosition endPosition =
         case maybeRoute of
           Just _ -> maybeRoute
           Nothing ->
-            case Map.lookup (applyMovement direction index) newRoutes of
-              Nothing -> Nothing
-              Just route ->
-                let prospectiveRoute = route ++ [oppositeDirection direction]
-                    safe = routeIsSafe world startPosition prospectiveRoute
-                in if safe
-                     then Just prospectiveRoute
-                     else Nothing
+            let adjacentIndex = applyMovement direction index
+            in case Map.lookup adjacentIndex newRoutes of
+                 Nothing -> Nothing
+                 Just (routeSoFar, worldSoFar) ->
+                   let lastStep = oppositeDirection direction
+                       safe = routeIsSafe worldSoFar adjacentIndex [lastStep]
+                   in if safe || True
+                        then case advanceWorld worldSoFar
+                                  (MoveAction lastStep) of
+                               Step world -> Just (routeSoFar ++ [lastStep],
+                                                   world)
+                               _ -> Nothing
+                        else Nothing
   in loop $ Map.fromList
           $ mapMaybe (\(index, cell) ->
                         if cell == RobotCell
-                          then Just (index, [])
+                          then Just (index, ([], world))
                           else Nothing)
                      (worldToList world)
 
@@ -145,17 +150,12 @@ imminentDanger world position
     | otherwise = False
   where
     cellSafe cell direction
-        | RockCell{} <- cell
-            = boulderMovable world position [direction,direction]
-        | otherwise = not (cellSolid cell)
+        | cellPushable cell =
+            boulderMovable world position [direction,direction]
+        | otherwise = not (cellEnterable cell)
 
-
-cellSolid :: Cell -> Bool
-cellSolid EarthCell = False
-cellSolid EmptyCell = False
-cellSolid _         = True
 
 boulderMovable :: World -> (Int,Int) -> [Direction] -> Bool
 boulderMovable world pos dir
-    | Just EmptyCell <- worldNearbyCell world pos dir = True
+    | Just cell <- worldNearbyCell world pos dir, cellIsEmpty cell = True
     | otherwise = False

@@ -6,7 +6,7 @@ module World
      worldToList,
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
-     cellEnterable, cellIsEmpty)
+     cellEnterable, cellPushable, cellIsEmpty)
     where
 
 import Prelude hiding (Either(..))
@@ -235,6 +235,11 @@ cellEnterable LambdaCell = True
 cellEnterable EarthCell = True
 cellEnterable cell | cellIsEmpty cell = True
                    | otherwise = False
+
+
+cellPushable :: Cell -> Bool
+cellPushable (RockCell _) = True
+cellPushable _ = False
 
 
 cellIsEmpty :: Cell -> Bool
