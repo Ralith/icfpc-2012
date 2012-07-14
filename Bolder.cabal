@@ -13,7 +13,8 @@ Executable bolder-vis
                  conduit >= 0.5.2 && < 1,
                  mtl >= 2.0.1.0 && < 3,
                  resourcet >= 0.3.2.1 && < 1,
-                 unix >= 2.5.1.0 && < 3
+                 unix >= 2.5.1.0 && < 3,
+                 data-lens == 2.10.*
   default-language: Haskell2010
 
 Executable bolder-contest
@@ -26,7 +27,9 @@ Executable bolder-contest
                  conduit >= 0.5.2 && < 1,
                  mtl >= 2.0.1.0 && < 3,
                  resourcet >= 0.3.2.1 && < 1,
-                 unix >= 2.5.1.0 && < 3
+                 unix >= 2.5.1.0 && < 3,
+                 data-lens == 2.10.*
+                 
   default-language: Haskell2010
   
 test-suite tests
@@ -47,6 +50,7 @@ test-suite tests
                      text >= 0.11.2.2 && < 1,
                      mtl >= 2.0.1.0 && < 3,
                      conduit >= 0.5.2 && < 1,
+                     data-lens == 2.10.*,
                      derive
     default-language: Haskell2010
 
@@ -62,6 +66,7 @@ Benchmark profiling
                    mtl >= 2.0.1.0 && < 3,
                    resourcet >= 0.3.2.1 && < 1,
                    unix >= 2.5.1.0 && < 3,
+                   data-lens == 2.10.*,
                    ghc-prim,
                    criterion == 0.6.0.*
 

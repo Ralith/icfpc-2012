@@ -12,6 +12,10 @@ import qualified Data.Text as T
 readWorld :: FilePath -> IO World
 readWorld filePath = readFile filePath >>= return . parseWorld . T.pack
 
+--This is just an example for testing
+isLiftOpen' :: World -> Bool
+isLiftOpen' x = isLiftOpen x (worldIndices x)
+
 myConfig = defaultConfig { cfgReport = Last $ Just "profile.html" }
 
 main = defaultMainWith myConfig (return ()) [

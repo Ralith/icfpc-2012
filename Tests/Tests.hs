@@ -26,12 +26,16 @@ isTotal2 testName f = testProperty testName test where
 
 isTotal3 testName f = testProperty testName test where
     test x y z = f x y z == f x y z -- just so it will evaluate
+    
+isLiftOpen' :: World -> Bool
+isLiftOpen' x = isLiftOpen x (worldIndices x)
+
 
 main = defaultMain [
     testGroup "update tests" [
         isTotal3 "advanceRobot is total" advanceRobot,
         isTotal2 "advanceWater is total" advanceWater,
-        isTotal2 "advanceWorld is total" advanceWorld,
+        isTotal2 "advanceWorld' is total" advanceWorld',
         isTotal "isLiftOpen' is total" isLiftOpen'
     ]]
 
@@ -40,7 +44,7 @@ main = defaultMain [
 -------------------------------------------------------------------------------------
 ----                            BoilerPlate                                     -----
 -------------------------------------------------------------------------------------
-type Word8Image = UArray (Int, Int) Word8
+
 
 instance Arbitrary Word8Image where
     arbitrary = do 

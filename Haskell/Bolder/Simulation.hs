@@ -1,19 +1,22 @@
 module Bolder.Simulation (
     StepResult(..), 
-    advanceWorld, 
+    advanceWorld,
+    advanceWorld', 
     advanceRobot,
     advanceWater,
     fallPossible, 
     cellEnterable,
-    isLiftOpen',
+    isLiftOpen,
     Circumstance(..)) where
 
 import Prelude hiding (Either(..))
 
 import Control.Monad
+import Control.Monad.State
 import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
+import Data.Lens.Common
 
 import Bolder.World
 
@@ -28,25 +31,16 @@ data Circumstance
 data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
     deriving (Show, Eq)
 
-
-isLiftOpen' :: World -> Bool
-isLiftOpen' x = isLiftOpen x (worldIndices x)
+type Context = State World
 
 
 isLiftOpen :: World -> [Location] -> Bool
-isLiftOpen world indices = liftOpen where
-  --This is something worth testing
-  liftOpen = foldl' (\liftOpen index ->
-                  case fromMaybe EmptyCell $ worldCell world index of
-                    LambdaCell -> False
-                    _ -> liftOpen)
-             True
-             indices
+isLiftOpen world = all (maybe True (not . isLambdaCell) . worldCell world)
 
 
-getCircumstances :: World -> [Location] -> Map.Map Location Circumstance             
-getCircumstances world indices = Map.fromList
-      $ mapMaybe (\index ->
+getCircumstances ::  [Location] -> World -> Context (Map.Map Location Circumstance)             
+getCircumstances indices world = 
+    return $ Map.fromList $ mapMaybe (\index ->
                     let isEmpty path =
                           maybe False cellIsEmpty
                                 $ worldNearbyCell world index path
@@ -60,8 +54,9 @@ getCircumstances world indices = Map.fromList
                             indices        
 
 
-getRobotPosition :: World -> [Location] -> Location                                    
-getRobotPosition world indices = foldl' (\robotPosition index ->
+getRobotPosition :: [Location] -> World -> Location                                    
+getRobotPosition indices world  = 
+    foldl' (\robotPosition index ->
            case fromMaybe EmptyCell $ worldCell world index of
              LambdaCell -> robotPosition
              RobotCell -> index
@@ -69,42 +64,53 @@ getRobotPosition world indices = foldl' (\robotPosition index ->
        (1, 1)
        indices 
 
-isRobotCrushed :: Action -> World -> World -> Location -> Bool       
-isRobotCrushed action oldWorld newWorld robotPosition = 
+
+isRobotCrushed :: Action -> World -> Location -> World -> Bool       
+isRobotCrushed action oldWorld robotPosition newWorld  = 
     Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
        || action == MoveAction Down
        && cellFalls (fromMaybe EmptyCell 
                 (worldNearbyCell oldWorld robotPosition Up))          
 
+incTicks :: Context ()
+incTicks = modify (worldTicksL ^+= 1)
+
+advanceWorld' :: World -> Action -> StepResult
+advanceWorld' w a = evalState (advanceWorld a) w
 --This can be cleaned up more with a State World
-advanceWorld :: World -> Action -> StepResult
-advanceWorld world action =
-  let size@(width, height) = worldSize world
-      allIndices    = worldIndices     world
-      robotPosition = getRobotPosition world allIndices
-      world2        = advanceRobot     world robotPosition action
-      liftOpen      = isLiftOpen       world2 allIndices
-      circumstances = getCircumstances world2 allIndices
-      world3        = advanceWater (snd robotPosition)
-          $ world2 {
-                worldData  = 
-                     makeWorldData size $
-                        map (advanceCell world2 liftOpen) allIndices,
-                worldTicks = 1 + worldTicks world2
-              }
-      robotCrushed = isRobotCrushed action world2 world3 robotPosition
+advanceWorld :: Action -> Context StepResult
+advanceWorld action = do
+  size@(width, height) <- gets worldSize
+  allIndices           <- gets worldIndices 
+  robotPosition        <- gets $ getRobotPosition allIndices
+  modify (advanceRobot robotPosition action)
+  
+  liftOpen             <- gets $ flip isLiftOpen  allIndices
+  circumstances        <- gets $ getCircumstances allIndices
+  --save the old world
+  oldWorld <- get
+  let newWorldData = makeWorldData size $ 
+                        map (advanceCell oldWorld liftOpen) allIndices
+  --update the world data
+  modify $ setL worldDataL newWorldData
+  incTicks
+        
+  modify $ advanceWater (snd robotPosition)
+          
+  robotCrushed <- gets $ isRobotCrushed action oldWorld robotPosition
+  world        <- get
 
-  in if action == AbortAction
-     then Abort
-     else if robotDrowned world3
-          then LossDrowned
+  if action == AbortAction
+     then return Abort
+     else if robotDrowned world
+          then return LossDrowned
           else if robotCrushed
-               then LossCrushed
-               else Step world3
+               then return $ LossCrushed
+               else return $ Step world
 
 
-advanceRobot :: World -> Location -> Action -> World
-advanceRobot world robotPosition action =
+advanceRobot :: Location -> Action -> World -> World
+advanceRobot robotPosition action world =
   let prospectivePosition =
         case action of
           MoveAction direction -> applyMovement direction robotPosition

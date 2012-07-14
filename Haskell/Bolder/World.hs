@@ -6,7 +6,8 @@ module Bolder.World
      worldToList,
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
-     cellEnterable, cellPushable, cellIsEmpty)
+     cellEnterable, cellPushable, cellIsEmpty,
+     isLambdaCell, worldTicksL, worldDataL, Word8Image)
     where
 
 import Prelude hiding (Either(..))
@@ -16,12 +17,16 @@ import Data.Word
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
+--import Data.DeriveTH
+import Data.Lens.Common
 
 type Location = (Int, Int)
 
+type Word8Image = UArray (Int, Int) Word8
+
 data World =
   World {
-      worldData :: UArray (Int, Int) Word8,
+      worldData :: UArray Location Word8,
       worldTicks :: Int,
       worldFloodingLevel :: Int,
       worldFloodingTicksPerLevel :: Int,
@@ -31,6 +36,13 @@ data World =
       worldLambdasCollected :: Int
     }
     deriving (Show, Eq)
+
+--lenses
+worldTicksL :: Lens World Int
+worldTicksL = lens worldTicks (\x w -> w {worldTicks = x})
+
+worldDataL :: Lens World Word8Image
+worldDataL = lens worldData (\x w -> w {worldData = x})
 
 
 data Cell
@@ -42,6 +54,12 @@ data Cell
   | EarthCell
   | EmptyCell
   deriving (Eq, Ord, Show)
+
+
+isLambdaCell :: Cell -> Bool
+isLambdaCell LambdaCell = True
+isLambdaCell _          = False
+
 
 data Action
   = MoveAction Direction
@@ -221,15 +239,15 @@ mutateWorld world mutations =
 
 
 readCell :: Char -> Cell
-readCell 'R' = RobotCell
-readCell '#' = WallCell
-readCell '*' = RockCell False
+readCell 'R'  = RobotCell
+readCell '#'  = WallCell
+readCell '*'  = RockCell False
 readCell '\\' = LambdaCell
-readCell 'L' = LambdaLiftCell False
-readCell 'O' = LambdaLiftCell True
-readCell '.' = EarthCell
-readCell ' ' = EmptyCell
-readCell _ = WallCell
+readCell 'L'  = LambdaLiftCell False
+readCell 'O'  = LambdaLiftCell True
+readCell '.'  = EarthCell
+readCell ' '  = EmptyCell
+readCell _    = WallCell
 
 
 cellEnterable :: Cell -> Bool
@@ -247,3 +265,18 @@ cellPushable _ = False
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
 cellIsEmpty _ = False
+
+------------------------------------------------------------------------------------------
+{-
+$(do
+    let dataTypes = [''World         ,
+                     ''Cell          ,
+                     ''Action        ,
+                     ''Direction      ]
+
+        customTypes = []
+
+    decs <- derives [makeIs, makeFrom] $ 
+                filter (\x -> not $ any (x==) customTypes) dataTypes
+    return $ decs)
+-}
