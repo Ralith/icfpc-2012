@@ -182,7 +182,7 @@ parseWorld text  =
        concat
        $ zipWith (\lineText rowIndex ->
                     zipWith (\cellCharacter columnIndex ->
-                               ((columnIndex, (height-1) - rowIndex),
+                               ((columnIndex, height - rowIndex),
                                 readCell cellCharacter))
                             (let lineChars = T.unpack lineText
                                  lineWidth = T.length lineText
@@ -191,7 +191,7 @@ parseWorld text  =
                              in lineChars ++ padding)
                             [1..])
                  bodyLines
-                 [1..]
+                 [0..]
   in World { worldData = makeWorldData (width, height) associations,
              worldTicks = 0,
              worldFloodingLevel = floodingLevel,
