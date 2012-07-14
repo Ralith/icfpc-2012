@@ -10,9 +10,7 @@ import qualified Data.Conduit.Text as C
 import qualified Data.Conduit.List as C
 import System.IO
 
-import World
-import Planning
-
+import Bolder
 
 encodeAction :: Action -> Char
 encodeAction (MoveAction Left)  = 'L'

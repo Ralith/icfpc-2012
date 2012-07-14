@@ -1,4 +1,4 @@
-module Planning (planner) where
+module Bolder.Planning (planner) where
 
 import Prelude hiding (Either(..))
 
@@ -13,8 +13,8 @@ import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-import Simulation
-import World
+import Bolder.Simulation
+import Bolder.World
 
 import Debug.Trace
 

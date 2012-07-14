@@ -1,4 +1,8 @@
-module Simulation (StepResult(..), advanceWorld, fallPossible, cellEnterable) where
+module Bolder.Simulation (
+    StepResult(..), 
+    advanceWorld, 
+    fallPossible, 
+    cellEnterable) where
 
 import Prelude hiding (Either(..))
 
@@ -7,7 +11,7 @@ import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
 
-import World
+import Bolder.World
 
 
 data Circumstance

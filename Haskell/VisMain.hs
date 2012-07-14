@@ -14,10 +14,7 @@ import System.Posix.Unistd
 import Data.Maybe
 import Control.Monad
 
-import World
-import Visualization
-import Simulation
-import Planning
+import Bolder
 
 
 readWorld :: FilePath -> IO World

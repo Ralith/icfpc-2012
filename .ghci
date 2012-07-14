@@ -1,0 +1,2 @@
+:set -i./Haskell -i./tests
+:load Tests/Tests.hs
