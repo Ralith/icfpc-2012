@@ -133,6 +133,7 @@ routeIsSafe world robotPosition (direction:rest) =
 
 imminentDanger :: World -> (Int,Int) -> Bool
 imminentDanger world position
+    | robotDrowned world = True
     | Just RockCell{} <- worldNearbyCell world position Up
     , Just cellL <- worldNearbyCell world position Left
     , Just cellR <- worldNearbyCell world position Right
