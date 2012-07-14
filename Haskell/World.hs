@@ -147,19 +147,6 @@ worldToList world =
       (assocs $ worldData world)
 
 
-robotSubmerged :: World -> Bool
-robotSubmerged world =
-    let (width, _) = worldSize world
-    in any (\cell ->
-                case cell of
-                  Just RobotCell -> True
-                  _ -> False) $
-    concatMap (\rowIndex ->
-               map (\columnIndex -> worldCell world (columnIndex, rowIndex))
-                   [0 .. width - 1])
-              [0 .. worldFloodingLevel world - 1]
-
-
 robotDrowned :: World -> Bool
 robotDrowned world = worldDrowningTicks world >= worldDrowningDuration world
 
