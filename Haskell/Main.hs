@@ -160,22 +160,20 @@ readWorld filePath = do
                             [0..])
                  bodyLines
                  [0..]
-  return $ makeWorld (width, height) associations
+  return $ World {
+               worldData = makeWorldData (width, height) associations,
+               worldFloodingLevel = floodingLevel,
+               worldFloodingTicksPerLevel = floodingTicksPerLevel,
+               worldFloodingTicks = floodingTicks,
+               worldDrowningDuration = drowningDuration,
+               worldDrowningTicks = drowningTicks
+             }
 
 
-makeWorld :: (Int, Int) -> [((Int, Int), Cell)] -> World
-makeWorld size associations =
-  let worldData = array ((0, 0), size)
-                      (map (\(index, cell) -> (index, encodeCell cell))
-                           associations)
-  in World {
-         worldData = worldData,
-         worldFloodingLevel = 0,
-         worldFloodingTicksPerLevel = 0,
-         worldFloodingTicks = 0,
-         worldDrowningDuration = 0,
-         worldDrowningTicks = 0
-       }
+makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
+makeWorldData size associations =
+  array ((0, 0), size)
+        (map (\(index, cell) -> (index, encodeCell cell)) associations)
 
 
 readCell :: Char -> Cell
@@ -296,7 +294,10 @@ advanceWorld world action =
                                        | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
-  in makeWorld size $ map (advanceCell world) allIndices
+  in world {
+         worldData = makeWorldData size $ map (advanceCell world) allIndices
+       }
+
 
 advanceCell :: World -> (Int, Int) -> ((Int, Int), Cell)
 advanceCell world index =
