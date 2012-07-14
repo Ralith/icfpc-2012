@@ -77,10 +77,10 @@ nextGoal world liftOpen startPosition =
 
 easyRoute :: World -> (Int, Int) -> (Int, Int) -> Maybe [Direction]
 easyRoute world startPosition endPosition =
-  let loop :: Map (Int, Int) ([Direction], World) -> Maybe [Direction]
+  let loop :: Map (Int, Int) [Direction] -> Maybe [Direction]
       loop routes =
         case Map.lookup endPosition routes of
-          result@(Just (route, _)) -> Just route
+          result@(Just _) -> result
           Nothing ->
             let (newRoutes, anyChanges) =
                   foldl' considerIndex
@@ -111,20 +111,11 @@ easyRoute world startPosition endPosition =
             let adjacentIndex = applyMovement direction index
             in case Map.lookup adjacentIndex newRoutes of
                  Nothing -> Nothing
-                 Just (routeSoFar, worldSoFar) ->
-                   let lastStep = oppositeDirection direction
-                       safe = routeIsSafe worldSoFar adjacentIndex [lastStep]
-                   in if safe || True
-                        then case advanceWorld worldSoFar
-                                  (MoveAction lastStep) of
-                               Step world -> Just (routeSoFar ++ [lastStep],
-                                                   world)
-                               _ -> Nothing
-                        else Nothing
+                 Just route -> Just $ route ++ [oppositeDirection direction]
   in loop $ Map.fromList
           $ mapMaybe (\(index, cell) ->
                         if cell == RobotCell
-                          then Just (index, ([], world))
+                          then Just (index, [])
                           else Nothing)
                      (worldToList world)
 
