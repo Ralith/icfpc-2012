@@ -124,13 +124,13 @@ fallPossible world path index = case worldNearbyCell world index Down of
 
     Just EmptyCell
         | not (isJust path) || path == Just [Up]
-        , Just EmptyCell <- worldNearbyCell world index Down
         -> True
 
     Just RockCell{}
         | Just [Up,Right] <- path, rockMovesLeft, rockMovesRight
         -> False
-        | rockMovesRight || rockMovesLeft -> True
+        | not (isJust path) || path == Just [Up,Left], rockMovesRight -> True
+        | not (isJust path) || path == Just [Up,Right], rockMovesLeft -> True
 
     _otherwise      -> False
 
