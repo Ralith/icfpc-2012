@@ -3,6 +3,7 @@ module Main (main) where
 
 import Prelude hiding (Either(..))
 
+import Control.Monad
 import Control.Monad.Trans
 import Data.Array.Unboxed
 import Data.Conduit
@@ -385,14 +386,9 @@ advanceCell world index =
       else if cellIsEmpty cell
            then fromMaybe cell
                     $ foldl' (\soFar path ->
-                              case soFar of
-                                Nothing ->
-                                    case worldNearbyCell world index path of
-                                      Just cellAbove
-                                          | cellFalls cellAbove ->
-                                              Just $ cellAfterFalling cellAbove
-                                      _ -> Nothing
-                                _ -> soFar)
+                                  mplus soFar $
+                                  fmap cellAfterFalling $
+                                  worldNearbyCell world index path)
                     Nothing [[Up], [Up, Left], [Up, Right]]
            else cell)
 
