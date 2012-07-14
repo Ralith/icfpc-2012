@@ -216,6 +216,13 @@ decodeCell 8 = EarthCell
 decodeCell 9 = EmptyCell
 
 
+oppositeDirection :: Direction -> Direction
+oppositeDirection Left = Right
+oppositeDirection Right = Left
+oppositeDirection Up = Down
+oppositeDirection Down = Up
+
+
 worldSize :: World -> (Int, Int)
 worldSize world =
   let (_, size) = bounds $ worldData world
@@ -403,9 +410,59 @@ cellAfterFalling (RockCell _) = RockCell True
 cellAfterFalling cell = cell
 
 
+cellEnterable :: Cell -> Bool
+cellEnterable LambdaCell = True
+cellEnterable EarthCell = True
+cellEnterable cell | cellIsEmpty cell = True
+                   | otherwise = False
+
+
 planner :: World -> Source (ResourceT IO) Action
 planner world = do
   mapM_ (\_ -> yield $ MoveAction Up)
         [0 .. 100]
   return ()
 
+
+easyRoute :: World -> (Int, Int) -> (Int, Int) -> Maybe [Direction]
+easyRoute world startPosition endPosition =
+  let loop :: Map (Int, Int) [Direction] -> Maybe [Direction]
+      loop routes =
+        case Map.lookup endPosition routes of
+          result@(Just _) -> result
+          Nothing ->
+            let (newRoutes, anyChanges) =
+                  foldl' considerIndex
+                         (routes, False)
+                         (range $ bounds $ worldData world)
+            in if anyChanges
+              then loop newRoutes
+              else Nothing
+      considerIndex (newRoutes, anyChanges) index =
+        let noChange = (newRoutes, anyChanges)
+            reachableBy directions =
+              (Map.insert index directions newRoutes, True)
+        in case Map.lookup index newRoutes of
+             result@(Just _) -> noChange
+             Nothing ->
+               case fromMaybe WallCell $ worldCell world index of
+                 cell | cellEnterable cell ->
+                        case foldl' (considerDirection newRoutes index)
+                                    Nothing
+                                    [Left, Right, Down, Up] of
+                          Nothing -> noChange
+                          Just route -> reachableBy route
+                      | otherwise -> noChange
+      considerDirection newRoutes index maybeRoute direction =
+        case maybeRoute of
+          Just _ -> maybeRoute
+          Nothing ->
+            case Map.lookup (applyMovement direction index) newRoutes of
+              Nothing -> Nothing
+              Just route -> Just $ route ++ [oppositeDirection direction]
+  in loop $ Map.fromList
+          $ mapMaybe (\(index, encodedCell) ->
+                        if decodeCell encodedCell == RobotCell
+                          then Just (index, [])
+                          else Nothing)
+                     (assocs $ worldData world)
