@@ -323,7 +323,7 @@ advanceWater world =
     in world { worldFloodingLevel = if worldFloodingTicksPerLevel world /= 0
                                     then worldFloodingLevel world + floodFactor
                                     else 0,
-               worldFloodingTicks = (worldFloodingTicks world + 1) * floodFactor,
+               worldFloodingTicks = (worldFloodingTicks world + 1) * (1 - floodFactor),
                worldDrowningDuration = 0,
                worldDrowningTicks = if robotSubmerged world
                                     then 1 + worldDrowningTicks world
