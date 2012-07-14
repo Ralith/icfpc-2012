@@ -61,7 +61,10 @@ nextRoute world liftOpen startPosition =
                            LambdaLiftCell _ | liftOpen -> True
                            _ -> False
               candidate = easyRoute world startPosition index >>=
-                          (\route -> Just (route, length route))
+                          (\route ->
+                             if routeIsSafe world startPosition route
+                               then Just (route, length route)
+                               else Nothing)
           in if goalHere
                then case maybeBestSoFar of
                       Nothing -> candidate
@@ -122,13 +125,15 @@ easyRoute world startPosition endPosition =
 
 
 routeIsSafe :: World -> (Int, Int) -> [Direction] -> Bool
-routeIsSafe world robotPosition [] = True
+routeIsSafe world robotPosition [] =
+  not $ imminentDanger world robotPosition
 routeIsSafe world robotPosition (direction:rest) =
   if imminentDanger world robotPosition
     then False
     else case advanceWorld' world $ MoveAction direction of
            Step newWorld ->
              routeIsSafe world (applyMovement direction robotPosition) rest
+           Win _ -> True
            _ -> False
 
 
@@ -145,7 +150,7 @@ imminentDanger world position
     cellSafe cell direction
         | cellPushable cell =
             boulderMovable world position [direction,direction]
-        | otherwise = not (cellEnterable cell)
+        | otherwise = cellEnterable cell
 
 
 boulderMovable :: World -> (Int,Int) -> [Direction] -> Bool
