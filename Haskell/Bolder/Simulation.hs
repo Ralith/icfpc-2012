@@ -32,6 +32,7 @@ data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
 isLiftOpen' :: World -> Bool
 isLiftOpen' x = isLiftOpen x (worldIndices x)
 
+
 isLiftOpen :: World -> [Location] -> Bool
 isLiftOpen world indices = liftOpen where
   --This is something worth testing
@@ -41,7 +42,9 @@ isLiftOpen world indices = liftOpen where
                     _ -> liftOpen)
              True
              indices
-             
+
+
+getCircumstances :: World -> [Location] -> Map.Map Location Circumstance             
 getCircumstances world indices = Map.fromList
       $ mapMaybe (\index ->
                     let isEmpty path =
@@ -55,7 +58,9 @@ getCircumstances world indices = Map.fromList
                                  () | isEmpty [Down] -> Just FallingDown
                                     | otherwise -> Nothing) 
                             indices        
-                                    
+
+
+getRobotPosition :: World -> [Location] -> Location                                    
 getRobotPosition world indices = foldl' (\robotPosition index ->
            case fromMaybe EmptyCell $ worldCell world index of
              LambdaCell -> robotPosition
@@ -63,7 +68,8 @@ getRobotPosition world indices = foldl' (\robotPosition index ->
              _ -> robotPosition)
        (1, 1)
        indices 
-       
+
+isRobotCrushed :: Action -> World -> World -> Location -> Bool       
 isRobotCrushed action oldWorld newWorld robotPosition = 
     Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
        || action == MoveAction Down
