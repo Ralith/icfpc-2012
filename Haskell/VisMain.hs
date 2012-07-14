@@ -30,18 +30,27 @@ main = do
       world <- readWorld worldFilePath
       visualize world []
       runResourceT $ planner world
-                       $= slower
-                       $$ C.foldM (\world action -> do
-                                     when debug (lift $ void getLine)
-                                     let result = advanceWorld' world action 
-                                     case result of
-                                       Step world' -> lift $ visualize world' [] >> return world'
-                                       Win -> lift $ putStrLn "Win" >> exitSuccess
-                                       Abort -> lift $ putStrLn "Abort" >> exitSuccess
-                                       LossDrowned -> lift $ putStrLn "Lost: Drowned" >> exitSuccess
-                                       LossCrushed -> lift $ putStrLn "Lost: Crushed" >> exitSuccess
-                                  )
-                       world
+                   $= slower
+                   $$ C.foldM (\world action -> do
+                                  when debug (lift $ void getLine)
+                                  let result = advanceWorld' world action 
+                                  case result of
+                                    Step world' -> do
+                                      lift $ visualize world' []
+                                      return world'
+                                    Win world' -> do
+                                      lift $ visualize world' ["Win"]
+                                      lift $ exitSuccess
+                                    Abort world' -> do
+                                      lift $ visualize world' ["Abort"]
+                                      lift $ exitSuccess
+                                    LossDrowned world' -> do
+                                      lift $ visualize world' ["Lost: Drowned"]
+                                      lift $ exitSuccess
+                                    LossCrushed world' -> do
+                                      lift $ visualize world' ["Lost: Crushed"]
+                                      lift $ exitSuccess)
+                              world
       exitSuccess
     _ -> do
       putStrLn $ "Usage: bolder input.map"

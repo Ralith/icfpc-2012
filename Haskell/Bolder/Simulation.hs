@@ -28,8 +28,13 @@ data Circumstance
   deriving (Eq, Ord)
 
 
-data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
-    deriving (Show, Eq)
+data StepResult
+  = Step World
+  | Win World
+  | Abort World
+  | LossDrowned World
+  | LossCrushed World
+  deriving (Show, Eq)
 
 type Context = State World
 
@@ -101,11 +106,11 @@ advanceWorld action = do
   world        <- get
 
   if action == AbortAction
-     then return Abort
+     then return $ Abort world
      else if robotDrowned world
-          then return LossDrowned
+          then return $ LossDrowned world
           else if robotCrushed
-               then return $ LossCrushed
+               then return $ LossCrushed world
                else return $ Step world
 
 
