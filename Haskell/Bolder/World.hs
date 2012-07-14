@@ -12,8 +12,10 @@ module Bolder.World
 
 import Prelude hiding (Either(..))
 
+import Control.Monad
 import Data.Array.Unboxed
 import Data.Word
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
@@ -34,7 +36,8 @@ data World =
       worldDrowningDuration :: Int,
       worldDrowningTicks :: Int,
       worldLambdasCollected :: Int,
-      worldTrampolines :: Map.Map Location Location
+      worldTrampolines :: Map.Map Int Location,
+      worldTargets :: Map.Map Int [Location]
     }
     deriving (Show, Eq)
 
@@ -54,8 +57,8 @@ data Cell
   | LambdaLiftCell Bool
   | EarthCell
   | EmptyCell
-  | TrampolineCell
-  | TargetCell
+  | TrampolineCell Int
+  | TargetCell Int
   deriving (Eq, Ord, Show)
 
 
@@ -113,8 +116,8 @@ encodeCell (LambdaLiftCell False) = 6
 encodeCell (LambdaLiftCell True)  = 7
 encodeCell EarthCell              = 8
 encodeCell EmptyCell              = 9
-encodeCell TrampolineCell         = 10
-encodeCell TargetCell             = 11
+encodeCell (TrampolineCell index) = 10 + (toEnum index)
+encodeCell (TargetCell index)     = 20 + (toEnum index)
 
 
 decodeCell :: Word8 -> Cell
@@ -127,9 +130,11 @@ decodeCell 6  = LambdaLiftCell False
 decodeCell 7  = LambdaLiftCell True
 decodeCell 8  = EarthCell
 decodeCell 9  = EmptyCell
-decodeCell 10 = TrampolineCell
-decodeCell 11 = TargetCell
-decodeCell x = error $ "decodeCell " ++ show x ++ " is not a valid option"
+decodeCell c
+    | c >= 10
+    , c <  20   = TrampolineCell $ (fromEnum c) - 10
+    | c <  30   = TargetCell $ (fromEnum c) - 20
+    | otherwise = error $ "decodeCell " ++ show c ++ " is not a valid option"
 
 
 worldSize :: World -> Location
@@ -227,7 +232,8 @@ parseWorld text  =
              worldDrowningDuration = drowningDuration,
              worldDrowningTicks = drowningTicks,
              worldLambdasCollected = 0,
-             worldTrampolines = Map.empty
+             worldTrampolines = Map.empty,
+             worldTargets = Map.empty
            }
 
 
@@ -255,9 +261,9 @@ readCell 'L'  = LambdaLiftCell False
 readCell 'O'  = LambdaLiftCell True
 readCell '.'  = EarthCell
 readCell ' '  = EmptyCell
-readCell c | elem c ['A'..'I'] = TrampolineCell
-           | elem c ['1'..'9'] = TargetCell
-           | otherwise         = WallCell
+readCell c = fromMaybe WallCell
+             $       (findIndex (== c) ['A'..'I'] >>= return . TrampolineCell)
+             `mplus` (findIndex (== c) ['1'..'9'] >>= return . TargetCell)
 
 
 cellEnterable :: Cell -> Bool
