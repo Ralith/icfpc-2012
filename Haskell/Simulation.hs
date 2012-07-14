@@ -54,9 +54,14 @@ advanceWorld world action =
                               $ map (advanceCell world2 liftOpen) allIndices,
                 worldTicks = 1 + worldTicks world2
               }
-  in if robotDrowned world3
-     then LossDrowned
-     else Step world3
+      robotCrushed = Just (RockCell True) == worldNearbyCell world3 robotPosition Up
+  in if action == AbortAction
+     then Abort
+     else if robotDrowned world3
+          then LossDrowned
+          else if robotCrushed
+               then LossCrushed
+               else Step world3
 
 
 advanceRobot :: World -> (Int, Int) -> Action -> World

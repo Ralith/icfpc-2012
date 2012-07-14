@@ -11,6 +11,8 @@ import System.IO
 import System.Environment
 import System.Exit
 import System.Posix.Unistd
+import Data.Maybe
+import Control.Monad
 
 import World
 import Visualization
@@ -24,6 +26,7 @@ readWorld filePath = readFile filePath >>= return . parseWorld . T.pack
 
 main :: IO ()
 main = do
+  debug <- fmap (isJust . lookup "DEBUG") getEnvironment
   parameters <- getArgs
   case parameters of
     [worldFilePath] -> do
@@ -32,6 +35,7 @@ main = do
       runResourceT $ planner world
                        $= slower
                        $$ C.foldM (\world action -> do
+                                     when debug (lift $ void getLine)
                                      let result = advanceWorld world action
                                      case result of
                                        Step world' -> lift $ visualize world' [] >> return world'
