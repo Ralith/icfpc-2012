@@ -26,7 +26,8 @@ data World =
       worldFloodingTicksPerLevel :: Int,
       worldFloodingTicks :: Int,
       worldDrowningDuration :: Int,
-      worldDrowningTicks :: Int
+      worldDrowningTicks :: Int,
+      worldLambdasCollected :: Int
     }
 
 
@@ -210,7 +211,8 @@ parseWorld text  =
              worldFloodingTicksPerLevel = floodingTicksPerLevel,
              worldFloodingTicks = floodingTicks,
              worldDrowningDuration = drowningDuration,
-             worldDrowningTicks = drowningTicks
+             worldDrowningTicks = drowningTicks,
+             worldLambdasCollected = 0
            }
 
 

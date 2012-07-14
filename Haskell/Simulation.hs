@@ -25,11 +25,11 @@ advanceWorld world action =
   let size@(width, height) = worldSize world
       allIndices = worldIndices world
       (liftOpen, robotPosition) =
-          foldl' (\(noLambdas, robotPosition) index ->
+          foldl' (\(liftOpen, robotPosition) index ->
                       case fromMaybe EmptyCell $ worldCell world index of
                         LambdaCell -> (False, robotPosition)
-                        RobotCell -> (noLambdas, index)
-                        _ -> (noLambdas, robotPosition))
+                        RobotCell -> (liftOpen, index)
+                        _ -> (liftOpen, robotPosition))
           (True, (0, 0))
           allIndices
       world2 = advanceRobot world robotPosition action
@@ -45,14 +45,13 @@ advanceWorld world action =
                                 cell | cellFalls cell ->
                                   case () of
                                     () | isEmpty [Down] -> Just FallingDown
-                                       | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
       world3 =
         advanceWater
           $ world2 {
                 worldData = makeWorldData size
-                              $ map (advanceCell world2) allIndices,
+                              $ map (advanceCell world2 liftOpen) allIndices,
                 worldTicks = 1 + worldTicks world2
               }
   in if robotDrowned world3
@@ -69,7 +68,10 @@ advanceRobot world robotPosition action =
       priorOccupant = fromMaybe WallCell $ worldCell world prospectivePosition
       effective = cellEnterable priorOccupant
   in if effective
-       then mutateWorld world
+       then mutateWorld (world { worldLambdasCollected = worldLambdasCollected world +
+                                                         if priorOccupant == LambdaCell
+                                                         then 1
+                                                         else 0})
                         [(robotPosition, EmptyCell),
                          (prospectivePosition, RobotCell)]
        else world
@@ -95,8 +97,8 @@ advanceWater world =
          }
 
 
-advanceCell :: World -> (Int, Int) -> ((Int, Int), Cell)
-advanceCell world index =
+advanceCell :: World -> Bool -> (Int, Int) -> ((Int, Int), Cell)
+advanceCell world liftOpen index =
   (index,
    let cell = fromMaybe EmptyCell $ worldCell world index
    in if cellFalls cell
@@ -113,7 +115,9 @@ advanceCell world index =
                                               Just $ cellAfterFalling cellAbove
                                       _ -> Nothing)
                     Nothing [[Up], [Up, Left], [Up, Right]]
-           else cell)
+           else if (cell == LambdaLiftCell False) && liftOpen
+                  then LambdaLiftCell True
+                  else cell)
 
 fallPossible :: World -> Maybe [Direction] -> (Int,Int) -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of

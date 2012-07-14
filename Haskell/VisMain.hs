@@ -49,7 +49,7 @@ main = do
 
 slower :: Conduit a (ResourceT IO) a
 slower = do
-  liftIO $ usleep 200000
+  liftIO $ usleep 50000
   maybeItem <- await
   case maybeItem of
     Just item -> do
