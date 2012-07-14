@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
 module Bolder.World
-    (World(..), Cell(..), Action(..), Direction(..),
+    (World(..), Cell(..), Action(..), Direction(..), Location,
      oppositeDirection, applyMovement,
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
@@ -17,6 +17,7 @@ import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
 
+type Location = (Int, Int)
 
 data World =
   World {
@@ -104,13 +105,13 @@ decodeCell 8 = EarthCell
 decodeCell 9 = EmptyCell
 
 
-worldSize :: World -> (Int, Int)
+worldSize :: World -> Location
 worldSize world =
   let (_, size) = bounds $ worldData world
   in size
 
 
-worldInBounds :: World -> (Int, Int) -> Bool
+worldInBounds :: World -> Location -> Bool
 worldInBounds world (columnIndex, rowIndex) =
   let (width, height) = worldSize world
   in (columnIndex >= 1)
@@ -119,7 +120,7 @@ worldInBounds world (columnIndex, rowIndex) =
      && (rowIndex <= height)
 
 
-worldCell :: World -> (Int, Int) -> Maybe Cell
+worldCell :: World -> Location -> Maybe Cell
 worldCell world index =
   if worldInBounds world index
     then Just $ decodeCell $ worldData world ! index
@@ -127,12 +128,12 @@ worldCell world index =
 
 
 worldNearbyCell
-  :: (Movement movement) => World -> (Int, Int) -> movement -> Maybe Cell
+  :: (Movement movement) => World -> Location -> movement -> Maybe Cell
 worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
 
 
-worldIndices :: World -> [(Int, Int)]
+worldIndices :: World -> [Location]
 worldIndices world =
   let (width, height) = worldSize world
   in [(columnIndex, rowIndex) |
@@ -141,7 +142,7 @@ worldIndices world =
 -- This is something worth testing
 
 
-worldToList :: World -> [((Int, Int), Cell)]
+worldToList :: World -> [(Location, Cell)]
 worldToList world =
   map (\(index, encodedCell) -> (index, decodeCell encodedCell))
       (assocs $ worldData world)
