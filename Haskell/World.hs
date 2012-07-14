@@ -4,7 +4,7 @@ module World
      oppositeDirection, applyMovement,
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
-     robotSubmerged, robotDrowned,
+     robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellIsEmpty)
     where
