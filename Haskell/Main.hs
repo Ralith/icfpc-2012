@@ -84,6 +84,9 @@ data Circumstance
   deriving (Eq, Ord)
 
 
+data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
+
+
 main :: IO ()
 main = do
   parameters <- getArgs
@@ -91,14 +94,18 @@ main = do
     [worldFilePath] -> do
       world <- readWorld worldFilePath
       visualize world []
-      world <- runResourceT
-                 $ planner world
-                 $= slower
-                 $$ C.foldM (\world action -> do
-                             let world' = advanceWorld world action
-                             lift $ visualize world' []
-                             return world')
-                            world
+      runResourceT $ planner world
+                       $= slower
+                       $$ C.foldM (\world action -> do
+                                     let result = advanceWorld world action
+                                     case result of
+                                       Step world' -> lift $ visualize world' [] >> return world'
+                                       Win -> lift $ putStrLn "Win" >> exitSuccess
+                                       Abort -> lift $ putStrLn "Abort" >> exitSuccess
+                                       LossDrowned -> lift $ putStrLn "Lost: Drowned" >> exitSuccess
+                                       LossCrushed -> lift $ putStrLn "Lost: Crushed" >> exitSuccess
+                                  )
+                       world
       exitSuccess
     _ -> do
       putStrLn $ "Usage: bolder input.map"
@@ -260,7 +267,7 @@ robotSubmerged world =
     concatMap (\rowIndex ->
                map (\columnIndex -> worldCell world (columnIndex, rowIndex))
                    [0 .. width - 1])
-              [0 .. worldFloodingLevel world]
+              [0 .. worldFloodingLevel world - 1]
 
 
 robotDrowned :: World -> Bool
@@ -273,7 +280,7 @@ visualize world debugInformation = do
       water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
   mapM_ (\rowIndex -> do
-           let underwater = (rowIndex + 1) < water
+           let underwater = rowIndex < water
                background = if underwater then "44" else "40"
                earthBackground = if underwater then "46" else "43"
            mapM_ (\columnIndex -> do
@@ -308,7 +315,7 @@ visualize world debugInformation = do
   hFlush stdout
 
 
-advanceWorld :: World -> Action -> World
+advanceWorld :: World -> Action -> StepResult
 advanceWorld world action =
   let size@(width, height) = worldSize world
       --
@@ -316,12 +323,14 @@ advanceWorld world action =
                     columnIndex <- [0 .. width - 1],
                     rowIndex <- [0 .. height - 1]]
       --This is something worth testing
-      liftOpen = foldl' (\soFar index ->
-                           case fromMaybe EmptyCell $ worldCell world index of
-                             LambdaCell -> False
-                             _ -> soFar)
-                        True
-                        allIndices
+      (liftOpen, robotPos) =
+          foldl' (\(noLambdas, robotPos) index ->
+                      case fromMaybe EmptyCell $ worldCell world index of
+                        LambdaCell -> (False, robotPos)
+                        RobotCell -> (noLambdas, index)
+                        _ -> (noLambdas, robotPos))
+          (True, undefined)
+          allIndices
       circumstances =
         Map.fromList
          $ mapMaybe (\index ->
@@ -337,12 +346,14 @@ advanceWorld world action =
                                        | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
-  in advanceWater
-       $ world {
-             worldData = makeWorldData size
-                           $ map (advanceCell world) allIndices,
-             worldTicks = 1 + worldTicks world
-           }
+      newWorld =
+          advanceWater $ world { worldData = makeWorldData size $
+                                             map (advanceCell world) allIndices,
+                                 worldTicks = 1 + worldTicks world
+                               }
+  in if robotDrowned newWorld
+     then LossDrowned
+     else Step newWorld
 
 
 advanceWater :: World -> World
