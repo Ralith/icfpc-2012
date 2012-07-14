@@ -69,7 +69,10 @@ advanceRobot world robotPosition action =
       priorOccupant = fromMaybe WallCell $ worldCell world prospectivePosition
       effective = cellEnterable priorOccupant
   in if effective
-       then mutateWorld world
+       then mutateWorld (world { worldLambdasCollected = worldLambdasCollected world +
+                                                         if priorOccupant == LambdaCell
+                                                         then 1
+                                                         else 0})
                         [(robotPosition, EmptyCell),
                          (prospectivePosition, RobotCell)]
        else world
