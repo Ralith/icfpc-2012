@@ -39,13 +39,13 @@ data Cell
   | LambdaLiftCell Bool
   | EarthCell
   | EmptyCell
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 data Action
   = MoveAction Direction
   | WaitAction
   | AbortAction
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 
 data Direction
@@ -53,7 +53,7 @@ data Direction
   | Right
   | Up
   | Down
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 
 class Movement movement where
