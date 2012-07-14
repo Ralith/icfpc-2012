@@ -126,9 +126,9 @@ easyRoute world startPosition endPosition =
 
 routeIsSafe :: World -> (Int, Int) -> [Direction] -> Bool
 routeIsSafe world robotPosition [] =
-  not $ imminentDoom world robotPosition
+  not $ deadly world robotPosition
 routeIsSafe world robotPosition (direction:rest) =
-  if imminentDoom world robotPosition
+  if deadly world robotPosition
     then False
     else case advanceWorld' world $ MoveAction direction of
            Step newWorld ->
@@ -137,8 +137,8 @@ routeIsSafe world robotPosition (direction:rest) =
            _ -> False
 
 
-imminentDoom :: World -> (Int,Int) -> Bool
-imminentDoom world position
+deadly :: World -> (Int,Int) -> Bool
+deadly world position
     | robotDrowned world = True
     | Just RockCell{} <- worldNearbyCell world position Up
     , Just cellL <- worldNearbyCell world position Left
