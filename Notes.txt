@@ -6,10 +6,6 @@ In this case the program should be sure to destroy them!
 
 SUBTLE BUG CAUSES
 
-  I implemented things with y=0 at the top of the world, rather than the
-bottom as the spec has it.  Be aware!  (And feel free to refactor it away
-if you have time.)
-
   As usual when using the words "row" and "column", be aware the coordinates
 and offsets are typically listed as column first, then row, which agrees with
 the (x, y) convention but disagrees with common English usage.

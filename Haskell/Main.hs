@@ -153,7 +153,7 @@ readWorld filePath = do
        concat
        $ zipWith (\lineText rowIndex ->
                     zipWith (\cellCharacter columnIndex ->
-                               ((columnIndex, rowIndex),
+                               ((columnIndex, (height-1) - rowIndex),
                                 readCell cellCharacter))
                             (let lineChars = T.unpack lineText
                                  lineWidth = T.length lineText
@@ -263,13 +263,17 @@ robotSubmerged world =
               [0 .. worldFloodingLevel world]
 
 
+robotDrowned :: World -> Bool
+robotDrowned world = worldDrowningTicks world >= worldDrowningDuration world
+
+
 visualize :: World -> [Text] -> IO ()
 visualize world debugInformation = do
   let (width, height) = worldSize world
       water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
   mapM_ (\rowIndex -> do
-           let underwater = height - (rowIndex + 1) < water
+           let underwater = (rowIndex + 1) < water
                background = if underwater then "44" else "40"
                earthBackground = if underwater then "46" else "43"
            mapM_ (\columnIndex -> do
@@ -290,7 +294,7 @@ visualize world debugInformation = do
                     )
                  [0 .. width - 1]
            putStr "\n")
-        [0 .. height - 1]
+        [height - 1, height - 2 .. 0]
   putStr "\x1B[m"
   let informationStartColumn = width + 2
   mapM_ (\(lineIndex, line) -> do
