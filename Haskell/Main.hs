@@ -285,7 +285,7 @@ visualize world debugInformation = do
            putStr "\n")
         [0 .. height - 1]
   putStr "\x1B[m"
-  let informationStartColumn = min 20 (width + 2)
+  let informationStartColumn = width + 2
   mapM_ (\(lineIndex, line) -> do
             putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
                      ++ (show informationStartColumn) ++ "f"
@@ -399,6 +399,6 @@ cellAfterFalling cell = cell
 planner :: World -> Source (ResourceT IO) Action
 planner world = do
   mapM_ (\_ -> yield $ MoveAction Up)
-        [0 .. 10]
+        [0 .. 100]
   return ()
 
