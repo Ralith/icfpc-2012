@@ -389,20 +389,28 @@ advanceCell world index =
                                 Nothing ->
                                     case worldNearbyCell world index path of
                                       Just cellAbove
-                                          | cellFalls cellAbove ->
+                                          | cellFalls cellAbove
+                                          , fallPossible world
+                                                (applyMovement path index) ->
                                               Just $ cellAfterFalling cellAbove
                                       _ -> Nothing
                                 _ -> soFar)
                     Nothing [[Up], [Up, Left], [Up, Right]]
            else cell)
 
+fallPossible :: World -> (Int,Int) -> Bool
+fallPossible world index = any (== Just EmptyCell)
+                         $ map (worldNearbyCell world index) possibleDirections
+  where
+    possibleDirections = case worldNearbyCell world index Down of
+        Just LambdaCell -> [[Down,Right]]
+        Just EmptyCell  -> [[Down]]
+        Just RockCell{} -> [[Down],[Down,Right],[Down,Left]]
+        _otherwise      -> []
+
 advanceFallCell :: World -> Cell -> (Int, Int) -> Cell
 advanceFallCell world cell index =
-  let cellBelowEmpty = fromMaybe False $ fmap cellIsEmpty $ worldNearbyCell world index Down
-  in if cellBelowEmpty
-     then EmptyCell
-     else cellAtRest cell
-
+  if fallPossible world index then EmptyCell else cellAtRest cell
 
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
