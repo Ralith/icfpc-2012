@@ -355,9 +355,9 @@ advanceWorld world action =
                               $ map (advanceCell world2) allIndices,
                 worldTicks = 1 + worldTicks world2
               }
-  in if robotDrowned newWorld
+  in if robotDrowned world3
      then LossDrowned
-     else Step newWorld
+     else Step world3
 
 
 advanceRobot :: World -> Action -> World
