@@ -55,7 +55,7 @@ advanceWorld world action =
                                        | otherwise -> Nothing)
                     allIndices
       world3 =
-        advanceWater
+        advanceWater (snd robotPosition)
           $ world2 {
                 worldData = makeWorldData size
                               $ map (advanceCell world2 liftOpen) allIndices,
@@ -92,8 +92,8 @@ advanceRobot world robotPosition action =
        else world
 
 
-advanceWater :: World -> World
-advanceWater world =
+advanceWater :: Int -> World -> World
+advanceWater robotAltitude world =
     let floodValue =
           if worldFloodingTicks world >= worldFloodingTicksPerLevel world - 1
             then 1
@@ -106,7 +106,7 @@ advanceWater world =
            worldFloodingTicks =
              (worldFloodingTicks world + 1) * (1 - floodValue),
            worldDrowningTicks =
-             if robotSubmerged world
+             if robotAltitude <= worldFloodingLevel world - 1
                then 1 + worldDrowningTicks world
                else 0
          }

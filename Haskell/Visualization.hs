@@ -43,6 +43,9 @@ visualize world debugInformation = do
         (zip [2 ..]
              ((T.pack $ (show $ worldTicks world) ++ " ticks")
               : (T.pack $ (show $ worldLambdasCollected world) ++ " lambdas")
+              : (T.pack $ (show $ worldDrowningTicks world)
+                      ++ "/" ++ (show $ worldDrowningDuration world)
+                             ++ " drowned")
               : debugInformation))
   putStr $ "\x1B[" ++ (show $ height + 2) ++ ";1f"
   hFlush stdout
