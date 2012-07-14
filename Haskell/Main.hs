@@ -67,8 +67,8 @@ class Movement movement where
 instance Movement Direction where
   applyMovement Left  (x, y) = (x - 1, y)
   applyMovement Right (x, y) = (x + 1, y)
-  applyMovement Up    (x, y) = (x, y - 1)
-  applyMovement Down  (x, y) = (x, y + 1)
+  applyMovement Up    (x, y) = (x, y + 1)
+  applyMovement Down  (x, y) = (x, y - 1)
 
 
 instance Movement [Direction] where
