@@ -3,8 +3,8 @@ version: 1.0
 cabal-version: 1.12
 build-type: Simple
 
-Executable bolder
-  main-is: Main.hs
+Executable bolder-vis
+  main-is: VisMain.hs
   hs-source-dirs: Haskell
   build-depends: array >= 0.4.0.0 && < 1,
                  base >= 4.1 && < 5,
