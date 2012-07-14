@@ -23,11 +23,7 @@ data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
 advanceWorld :: World -> Action -> StepResult
 advanceWorld world action =
   let size@(width, height) = worldSize world
-      --
-      allIndices = [(columnIndex, rowIndex) |
-                    columnIndex <- [0 .. width - 1],
-                    rowIndex <- [0 .. height - 1]]
-      --This is something worth testing
+      allIndices = worldIndices world
       (liftOpen, robotPosition) =
           foldl' (\(noLambdas, robotPosition) index ->
                       case fromMaybe EmptyCell $ worldCell world index of
