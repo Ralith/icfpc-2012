@@ -26,7 +26,7 @@ visualize world debugInformation = do
                           LambdaLiftCell False ->
                             "\x1B[22;" ++ background ++ ";37m◫"
                           LambdaLiftCell True ->
-                            "\x1B[22;" ++ background ++ ";33m◫"
+                            "\x1B[22;" ++ background ++ ";33m□"
                           EarthCell -> "\x1B[22;" ++ earthBackground ++ "m "
                           EmptyCell -> "\x1B[22;" ++ background ++ "m "
                           -- _ -> "\x1B[22;1;41;30m?"
