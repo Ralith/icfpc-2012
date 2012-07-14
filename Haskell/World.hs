@@ -5,7 +5,7 @@ module World
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
      robotSubmerged, robotDrowned,
-     readWorld, makeWorldData, mutateWorld,
+     parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellIsEmpty)
     where
 
@@ -16,10 +16,6 @@ import Data.Word
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
-import Data.Conduit
-import qualified Data.Conduit.Binary as C hiding (lines)
-import qualified Data.Conduit.Text as C
-import qualified Data.Conduit.List as C
 
 
 data World =
@@ -166,14 +162,11 @@ robotSubmerged world =
 robotDrowned :: World -> Bool
 robotDrowned world = worldDrowningTicks world >= worldDrowningDuration world
 
-readWorld :: FilePath -> IO World
-readWorld filePath = do
-  lines <- runResourceT
-             $ C.sourceFile filePath
-             $= C.decode C.ascii
-             $= C.lines
-             $$ C.consume
-  let (_, bodyLines, headerLines) =
+
+parseWorld :: T.Text -> World
+parseWorld text  =
+  let lines = T.split (== '\n') text
+      (_, bodyLines, headerLines) =
         foldl' (\(bodyDone, bodySoFar, headerSoFar) line ->
                    if bodyDone
                      then (True, bodySoFar, headerSoFar ++ [line])
@@ -211,15 +204,14 @@ readWorld filePath = do
                             [0..])
                  bodyLines
                  [0..]
-  return $ World {
-               worldData = makeWorldData (width, height) associations,
-               worldTicks = 0,
-               worldFloodingLevel = floodingLevel,
-               worldFloodingTicksPerLevel = floodingTicksPerLevel,
-               worldFloodingTicks = floodingTicks,
-               worldDrowningDuration = drowningDuration,
-               worldDrowningTicks = drowningTicks
-             }
+  in World { worldData = makeWorldData (width, height) associations,
+             worldTicks = 0,
+             worldFloodingLevel = floodingLevel,
+             worldFloodingTicksPerLevel = floodingTicksPerLevel,
+             worldFloodingTicks = floodingTicks,
+             worldDrowningDuration = drowningDuration,
+             worldDrowningTicks = drowningTicks
+           }
 
 
 makeWorldData :: (Int, Int) -> [((Int, Int), Cell)] -> UArray (Int, Int) Word8
