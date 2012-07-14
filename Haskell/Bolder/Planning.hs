@@ -20,7 +20,7 @@ import Bolder.World
 import Debug.Trace
 
 data Problem
-  = BoulderInTheWayProblem Location
+  = RockInTheWayProblem Location
   deriving (Eq, Ord)
 
 
@@ -126,6 +126,13 @@ easyRoute world startPosition endPosition =
                                     [Left, Right, Down, Up] of
                           Nothing -> noChange
                           Just route -> reachableBy route
+                      | Just problem <- cellProblemOfTraversing cell index ->
+                        case foldl' (considerDirection newRoutes index)
+                                    Nothing
+                                    [Left, Right, Down, Up] of
+                          Nothing -> noChange
+                          Just route ->
+                            reachableBy $ addProblemToRoute route problem
                       | otherwise -> noChange
       considerDirection
         :: Map Location Route -> Location
@@ -206,6 +213,12 @@ addProblemToRoute route problem =
   route {
       routeProblems = routeProblems route ++ [problem]
     }
+
+
+cellProblemOfTraversing :: Cell -> Location -> Maybe Problem
+cellProblemOfTraversing (RockCell _) location =
+  Just (RockInTheWayProblem location)
+cellProblemOfTraversing _ _ = Nothing
 
 
 routeLength :: World -> Route -> Int
