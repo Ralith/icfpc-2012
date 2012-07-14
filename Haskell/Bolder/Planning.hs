@@ -64,7 +64,39 @@ planner world = do
 
 
 nextRoute :: World -> Bool -> Location -> Maybe Route
-nextRoute world liftOpen startPosition =
+nextRoute world liftOpen startPosition = do
+  route <- nextRoute' world liftOpen startPosition
+  case routeProblems route of
+    [] -> Just route
+    (problem : rest) -> do
+      resolution <- resolveProblem world problem startPosition
+      world <- foldM (\world direction -> do
+                        let action = MoveAction direction
+                        case advanceWorld' world action of
+                          Step newWorld -> Just newWorld
+                          Win newWorld -> Just newWorld
+                          Abort newWorld -> Just newWorld
+                          _ -> Nothing)
+                     world
+                     (routeDirections route)
+      let allIndices = worldIndices world
+          (liftOpen, maybeRobotPosition) =
+            foldl' (\(liftOpen, maybeRobotPosition) index ->
+                      case fromMaybe EmptyCell $ worldCell world index of
+                        LambdaCell -> (False, maybeRobotPosition)
+                        RobotCell -> (liftOpen, Just index)
+                        _ -> (liftOpen, maybeRobotPosition))
+                   (True, Nothing)
+                   allIndices
+      case maybeRobotPosition of
+        Nothing -> Nothing
+        Just robotPosition -> do
+          next <- nextRoute world liftOpen robotPosition
+          Just $ concatRoutes [resolution, next]
+
+
+nextRoute' :: World -> Bool -> Location -> Maybe Route
+nextRoute' world liftOpen startPosition =
   fmap (\(route, _, _) -> route)
    $ foldl'
        (\maybeBestSoFar index ->
@@ -93,6 +125,13 @@ nextRoute world liftOpen startPosition =
                else maybeBestSoFar)
       Nothing
       (worldIndices world)
+
+
+resolveProblem :: World -> Problem -> Location -> Maybe Route
+resolveProblem world (RockInTheWayProblem rockLocation) startPosition = do
+  route <- easyRoute world startPosition (applyMovement Down rockLocation)
+  route <- return $ appendToRoute route Left
+  return route
 
 
 easyRoute :: World -> Location -> Location -> Maybe Route
@@ -212,6 +251,14 @@ addProblemToRoute :: Route -> Problem -> Route
 addProblemToRoute route problem =
   route {
       routeProblems = routeProblems route ++ [problem]
+    }
+
+
+concatRoutes :: [Route] -> Route
+concatRoutes routes =
+  Route {
+      routeDirections = concat $ map routeDirections routes,
+      routeProblems = concat $ map routeProblems routes
     }
 
 
