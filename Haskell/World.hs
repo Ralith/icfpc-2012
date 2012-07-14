@@ -139,8 +139,8 @@ worldIndices :: World -> [(Int, Int)]
 worldIndices world =
   let (width, height) = worldSize world
   in [(columnIndex, rowIndex) |
-      columnIndex <- [0 .. width - 1],
-      rowIndex <- [0 .. height - 1]]
+      rowIndex <- [0 .. height - 1],
+      columnIndex <- [0 .. width - 1]]
 -- This is something worth testing
 
 

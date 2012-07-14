@@ -118,11 +118,13 @@ advanceCell world index =
 fallPossible :: World -> Maybe [Direction] -> (Int,Int) -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of
     Just LambdaCell
-        | Just EmptyCell <- worldNearbyCell world index [Down,Right]
+        | Just EmptyCell <- worldNearbyCell world index Right
+        , Just EmptyCell <- worldNearbyCell world index [Down,Right]
         -> True
 
     Just EmptyCell
-        | Just EmptyCell <- worldNearbyCell world index Down
+        | not (isJust path) || path == Just [Up]
+        , Just EmptyCell <- worldNearbyCell world index Down
         -> True
 
     Just RockCell{}
