@@ -13,11 +13,8 @@ import System.Exit
 import System.Posix.Unistd
 import Data.Maybe
 import Control.Monad
-
-import World
-import Visualization
-import Simulation
-import Planning
+import Control.Monad.State
+import Bolder
 
 
 readWorld :: FilePath -> IO World
@@ -36,7 +33,7 @@ main = do
                        $= slower
                        $$ C.foldM (\world action -> do
                                      when debug (lift $ void getLine)
-                                     let result = advanceWorld world action
+                                     let result = advanceWorld' world action 
                                      case result of
                                        Step world' -> lift $ visualize world' [] >> return world'
                                        Win -> lift $ putStrLn "Win" >> exitSuccess

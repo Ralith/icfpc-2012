@@ -1,13 +1,24 @@
-module Simulation (StepResult(..), advanceWorld, fallPossible, cellEnterable) where
+module Bolder.Simulation (
+    StepResult(..), 
+    advanceWorld,
+    advanceWorld', 
+    advanceRobot,
+    advanceWater,
+    fallPossible, 
+    cellEnterable,
+    isLiftOpen,
+    Circumstance(..)) where
 
 import Prelude hiding (Either(..))
 
 import Control.Monad
+import Control.Monad.State
 import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
+import Data.Lens.Common
 
-import World
+import Bolder.World
 
 
 data Circumstance
@@ -18,64 +29,88 @@ data Circumstance
 
 
 data StepResult = Step World | Win | Abort | LossDrowned | LossCrushed
+    deriving (Show, Eq)
+
+type Context = State World
 
 
-advanceWorld :: World -> Action -> StepResult
-advanceWorld world action =
-  let size@(width, height) = worldSize world
-      allIndices = worldIndices world
-      robotPosition =
-        foldl' (\robotPosition index ->
-                   case fromMaybe EmptyCell $ worldCell world index of
-                     LambdaCell -> robotPosition
-                     RobotCell -> index
-                     _ -> robotPosition)
-               (1, 1)
-               allIndices
-      world2 = advanceRobot world robotPosition action
-      liftOpen =
-        foldl' (\liftOpen index ->
-                    case fromMaybe EmptyCell $ worldCell world2 index of
-                      LambdaCell -> False
-                      _ -> liftOpen)
-               True
-               allIndices
-      circumstances =
-        Map.fromList
-         $ mapMaybe (\index ->
-                       let isEmpty path =
-                             maybe False cellIsEmpty
-                                   $ worldNearbyCell world2 index path
-                       in fmap (\circumstance -> (index, circumstance))
-                            $ case fromMaybe EmptyCell
-                                     $ worldCell world2 index of
-                                cell | cellFalls cell ->
-                                  case () of
-                                    () | isEmpty [Down] -> Just FallingDown
-                                       | otherwise -> Nothing)
-                    allIndices
-      world3 =
-        advanceWater (snd robotPosition)
-          $ world2 {
-                worldData = makeWorldData size
-                              $ map (advanceCell world2 liftOpen) allIndices,
-                worldTicks = 1 + worldTicks world2
-              }
-      robotCrushed = Just (RockCell True) == worldNearbyCell world3 robotPosition Up
-        || action == MoveAction Down
-        && cellFalls (fromMaybe EmptyCell (worldNearbyCell world2 robotPosition Up))
+isLiftOpen :: World -> [Location] -> Bool
+isLiftOpen world = all (maybe True (not . isLambdaCell) . worldCell world)
 
-  in if action == AbortAction
-     then Abort
-     else if robotDrowned world3
-          then LossDrowned
+
+getCircumstances ::  [Location] -> World -> Context (Map.Map Location Circumstance)             
+getCircumstances indices world = 
+    return $ Map.fromList $ mapMaybe (\index ->
+                    let isEmpty path =
+                          maybe False cellIsEmpty
+                                $ worldNearbyCell world index path
+                    in fmap (\circumstance -> (index, circumstance))
+                         $ case fromMaybe EmptyCell
+                                  $ worldCell world index of
+                             cell | cellFalls cell ->
+                               case () of
+                                 () | isEmpty [Down] -> Just FallingDown
+                                    | otherwise -> Nothing) 
+                            indices        
+
+
+getRobotPosition :: [Location] -> World -> Location                                    
+getRobotPosition indices world  = 
+    foldl' (\robotPosition index ->
+           case fromMaybe EmptyCell $ worldCell world index of
+             LambdaCell -> robotPosition
+             RobotCell -> index
+             _ -> robotPosition)
+       (1, 1)
+       indices 
+
+
+isRobotCrushed :: Action -> World -> Location -> World -> Bool       
+isRobotCrushed action oldWorld robotPosition newWorld  = 
+    Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
+       || action == MoveAction Down
+       && cellFalls (fromMaybe EmptyCell 
+                (worldNearbyCell oldWorld robotPosition Up))          
+
+incTicks :: Context ()
+incTicks = modify (worldTicksL ^+= 1)
+
+advanceWorld' :: World -> Action -> StepResult
+advanceWorld' w a = evalState (advanceWorld a) w
+--This can be cleaned up more with a State World
+advanceWorld :: Action -> Context StepResult
+advanceWorld action = do
+  size@(width, height) <- gets worldSize
+  allIndices           <- gets worldIndices 
+  robotPosition        <- gets $ getRobotPosition allIndices
+  modify (advanceRobot robotPosition action)
+  
+  liftOpen             <- gets $ flip isLiftOpen  allIndices
+  circumstances        <- gets $ getCircumstances allIndices
+  --save the old world
+  oldWorld <- get
+  let newWorldData = makeWorldData size $ 
+                        map (advanceCell oldWorld liftOpen) allIndices
+  --update the world data
+  modify $ setL worldDataL newWorldData
+  incTicks
+        
+  modify $ advanceWater (snd robotPosition)
+          
+  robotCrushed <- gets $ isRobotCrushed action oldWorld robotPosition
+  world        <- get
+
+  if action == AbortAction
+     then return Abort
+     else if robotDrowned world
+          then return LossDrowned
           else if robotCrushed
-               then LossCrushed
-               else Step world3
+               then return $ LossCrushed
+               else return $ Step world
 
 
-advanceRobot :: World -> (Int, Int) -> Action -> World
-advanceRobot world robotPosition action =
+advanceRobot :: Location -> Action -> World -> World
+advanceRobot robotPosition action world =
   let prospectivePosition =
         case action of
           MoveAction direction -> applyMovement direction robotPosition
@@ -112,7 +147,7 @@ advanceWater robotAltitude world =
          }
 
 
-advanceCell :: World -> Bool -> (Int, Int) -> ((Int, Int), Cell)
+advanceCell :: World -> Bool -> Location -> (Location, Cell)
 advanceCell world liftOpen index =
   (index,
    let cell = fromMaybe EmptyCell $ worldCell world index
@@ -134,7 +169,7 @@ advanceCell world liftOpen index =
                   then LambdaLiftCell True
                   else cell)
 
-fallPossible :: World -> Maybe [Direction] -> (Int,Int) -> Bool
+fallPossible :: World -> Maybe [Direction] -> Location -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of
     Just LambdaCell
         | Just EmptyCell <- worldNearbyCell world index Right
@@ -166,7 +201,7 @@ fallPossible world path index = case worldNearbyCell world index Down of
         = True
         | otherwise = False
 
-advanceFallCell :: World -> Cell -> (Int, Int) -> Cell
+advanceFallCell :: World -> Cell -> Location -> Cell
 advanceFallCell world cell index =
   if fallPossible world Nothing index then EmptyCell else cellAtRest cell
 

@@ -1,4 +1,4 @@
-module Planning (planner) where
+module Bolder.Planning (planner) where
 
 import Prelude hiding (Either(..))
 
@@ -12,9 +12,10 @@ import Data.Maybe
 import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Monad.State
 
-import Simulation
-import World
+import Bolder.Simulation
+import Bolder.World
 
 import Debug.Trace
 
@@ -40,7 +41,7 @@ planner world = do
                    Just world -> do
                      let action = MoveAction direction
                      yield action
-                     case advanceWorld world action of
+                     case advanceWorld' world action of
                        Step newWorld -> return $ Just newWorld
                        _ -> return Nothing)
               (Just world)
@@ -125,7 +126,7 @@ routeIsSafe world robotPosition [] = True
 routeIsSafe world robotPosition (direction:rest) =
   if imminentDanger world robotPosition
     then False
-    else case advanceWorld world $ MoveAction direction of
+    else case advanceWorld' world $ MoveAction direction of
            Step newWorld ->
              routeIsSafe world (applyMovement direction robotPosition) rest
            _ -> False

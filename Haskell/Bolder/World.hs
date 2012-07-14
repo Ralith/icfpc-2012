@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
-module World
-    (World(..), Cell(..), Action(..), Direction(..),
+module Bolder.World
+    (World(..), Cell(..), Action(..), Direction(..), Location,
      oppositeDirection, applyMovement,
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
-     cellEnterable, cellPushable, cellIsEmpty)
+     cellEnterable, cellPushable, cellIsEmpty,
+     isLambdaCell, worldTicksL, worldDataL, Word8Image)
     where
 
 import Prelude hiding (Either(..))
@@ -16,19 +17,33 @@ import Data.Word
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List
+--import Data.DeriveTH
+import Data.Lens.Common
 
+type Location = (Int, Int)
+
+type Word8Image = UArray (Int, Int) Word8
 
 data World =
   World {
-      worldData :: UArray (Int, Int) Word8,
+      worldData :: UArray Location Word8,
       worldTicks :: Int,
       worldFloodingLevel :: Int,
       worldFloodingTicksPerLevel :: Int,
       worldFloodingTicks :: Int,
       worldDrowningDuration :: Int,
       worldDrowningTicks :: Int,
-      worldLambdasCollected :: Int
+      worldLambdasCollected :: Int,
+      worldTrampolines :: Map.Map Location Location
     }
+    deriving (Show, Eq)
+
+--lenses
+worldTicksL :: Lens World Int
+worldTicksL = lens worldTicks (\x w -> w {worldTicks = x})
+
+worldDataL :: Lens World Word8Image
+worldDataL = lens worldData (\x w -> w {worldData = x})
 
 
 data Cell
@@ -39,7 +54,15 @@ data Cell
   | LambdaLiftCell Bool
   | EarthCell
   | EmptyCell
+  | TrampolineCell
+  | TargetCell
   deriving (Eq, Ord, Show)
+
+
+isLambdaCell :: Cell -> Bool
+isLambdaCell LambdaCell = True
+isLambdaCell _          = False
+
 
 data Action
   = MoveAction Direction
@@ -81,36 +104,41 @@ oppositeDirection Down = Up
 
 
 encodeCell :: Cell -> Word8
-encodeCell RobotCell = 1
-encodeCell WallCell = 2
-encodeCell (RockCell False) = 3
-encodeCell (RockCell True) = 4
-encodeCell LambdaCell = 5
+encodeCell RobotCell              = 1
+encodeCell WallCell               = 2
+encodeCell (RockCell False)       = 3
+encodeCell (RockCell True)        = 4
+encodeCell LambdaCell             = 5
 encodeCell (LambdaLiftCell False) = 6
-encodeCell (LambdaLiftCell True) = 7
-encodeCell EarthCell = 8
-encodeCell EmptyCell = 9
+encodeCell (LambdaLiftCell True)  = 7
+encodeCell EarthCell              = 8
+encodeCell EmptyCell              = 9
+encodeCell TrampolineCell         = 10
+encodeCell TargetCell             = 11
 
 
 decodeCell :: Word8 -> Cell
-decodeCell 1 = RobotCell
-decodeCell 2 = WallCell
-decodeCell 3 = RockCell False
-decodeCell 4 = RockCell True
-decodeCell 5 = LambdaCell
-decodeCell 6 = LambdaLiftCell False
-decodeCell 7 = LambdaLiftCell True
-decodeCell 8 = EarthCell
-decodeCell 9 = EmptyCell
+decodeCell 1  = RobotCell
+decodeCell 2  = WallCell
+decodeCell 3  = RockCell False
+decodeCell 4  = RockCell True
+decodeCell 5  = LambdaCell
+decodeCell 6  = LambdaLiftCell False
+decodeCell 7  = LambdaLiftCell True
+decodeCell 8  = EarthCell
+decodeCell 9  = EmptyCell
+decodeCell 10 = TrampolineCell
+decodeCell 11 = TargetCell
+decodeCell x = error $ "decodeCell " ++ show x ++ " is not a valid option"
 
 
-worldSize :: World -> (Int, Int)
+worldSize :: World -> Location
 worldSize world =
   let (_, size) = bounds $ worldData world
   in size
 
 
-worldInBounds :: World -> (Int, Int) -> Bool
+worldInBounds :: World -> Location -> Bool
 worldInBounds world (columnIndex, rowIndex) =
   let (width, height) = worldSize world
   in (columnIndex >= 1)
@@ -119,7 +147,7 @@ worldInBounds world (columnIndex, rowIndex) =
      && (rowIndex <= height)
 
 
-worldCell :: World -> (Int, Int) -> Maybe Cell
+worldCell :: World -> Location -> Maybe Cell
 worldCell world index =
   if worldInBounds world index
     then Just $ decodeCell $ worldData world ! index
@@ -127,21 +155,20 @@ worldCell world index =
 
 
 worldNearbyCell
-  :: (Movement movement) => World -> (Int, Int) -> movement -> Maybe Cell
+  :: (Movement movement) => World -> Location -> movement -> Maybe Cell
 worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
 
 
-worldIndices :: World -> [(Int, Int)]
+worldIndices :: World -> [Location]
 worldIndices world =
   let (width, height) = worldSize world
   in [(columnIndex, rowIndex) |
-      rowIndex <- [1 .. height],
-      columnIndex <- [1 .. width]]
--- This is something worth testing
+      rowIndex    <- [1 .. height],
+      columnIndex <- [1 .. width ]]
 
 
-worldToList :: World -> [((Int, Int), Cell)]
+worldToList :: World -> [(Location, Cell)]
 worldToList world =
   map (\(index, encodedCell) -> (index, decodeCell encodedCell))
       (assocs $ worldData world)
@@ -199,7 +226,8 @@ parseWorld text  =
              worldFloodingTicks = floodingTicks,
              worldDrowningDuration = drowningDuration,
              worldDrowningTicks = drowningTicks,
-             worldLambdasCollected = 0
+             worldLambdasCollected = 0,
+             worldTrampolines = Map.empty
            }
 
 
@@ -219,15 +247,17 @@ mutateWorld world mutations =
 
 
 readCell :: Char -> Cell
-readCell 'R' = RobotCell
-readCell '#' = WallCell
-readCell '*' = RockCell False
+readCell 'R'  = RobotCell
+readCell '#'  = WallCell
+readCell '*'  = RockCell False
 readCell '\\' = LambdaCell
-readCell 'L' = LambdaLiftCell False
-readCell 'O' = LambdaLiftCell True
-readCell '.' = EarthCell
-readCell ' ' = EmptyCell
-readCell _ = WallCell
+readCell 'L'  = LambdaLiftCell False
+readCell 'O'  = LambdaLiftCell True
+readCell '.'  = EarthCell
+readCell ' '  = EmptyCell
+readCell c | elem c ['A'..'I'] = TrampolineCell
+           | elem c ['1'..'9'] = TargetCell
+           | otherwise         = WallCell
 
 
 cellEnterable :: Cell -> Bool
@@ -245,3 +275,18 @@ cellPushable _ = False
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
 cellIsEmpty _ = False
+
+------------------------------------------------------------------------------------------
+{-
+$(do
+    let dataTypes = [''World         ,
+                     ''Cell          ,
+                     ''Action        ,
+                     ''Direction      ]
+
+        customTypes = []
+
+    decs <- derives [makeIs, makeFrom] $ 
+                filter (\x -> not $ any (x==) customTypes) dataTypes
+    return $ decs)
+-}

@@ -1,10 +1,10 @@
-module Visualization (visualize) where
+module Bolder.Visualization (visualize) where
 
 import Data.Maybe
 import qualified Data.Text as T
 import System.IO
 
-import World
+import Bolder.World
 
 visualize :: World -> [T.Text] -> IO ()
 visualize world debugInformation = do
@@ -29,6 +29,8 @@ visualize world debugInformation = do
                             "\x1B[22;" ++ background ++ ";33m□"
                           EarthCell -> "\x1B[22;" ++ earthBackground ++ "m "
                           EmptyCell -> "\x1B[22;" ++ background ++ "m "
+                          TrampolineCell -> "\x1B[22;" ++ background ++ "m⇪"
+                          TargetCell -> "\x1B[22;" ++ background ++ "m⊚"
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
                  [1 .. width]
