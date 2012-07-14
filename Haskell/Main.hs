@@ -336,16 +336,23 @@ advanceWorld world action =
 
 advanceWater :: World -> World
 advanceWater world =
-    let floodFactor = if worldFloodingTicks world >= worldFloodingTicksPerLevel world - 1 then 1 else 0
-    in world { worldFloodingLevel = if worldFloodingTicksPerLevel world /= 0
-                                    then worldFloodingLevel world + floodFactor
-                                    else 0,
-               worldFloodingTicks = (worldFloodingTicks world + 1) * (1 - floodFactor),
-               worldDrowningDuration = 0,
-               worldDrowningTicks = if robotSubmerged world
-                                    then 1 + worldDrowningTicks world
-                                    else 0
-             }
+    let floodValue =
+          if worldFloodingTicks world >= worldFloodingTicksPerLevel world - 1
+            then 1
+            else 0
+    in world {
+           worldFloodingLevel =
+             if worldFloodingTicksPerLevel world /= 0
+               then worldFloodingLevel world + floodValue
+               else worldFloodingLevel world,
+           worldFloodingTicks =
+             (worldFloodingTicks world + 1) * (1 - floodValue),
+           worldDrowningDuration = 0,
+           worldDrowningTicks =
+             if robotSubmerged world
+               then 1 + worldDrowningTicks world
+               else 0
+         }
 
 
 advanceCell :: World -> (Int, Int) -> ((Int, Int), Cell)
