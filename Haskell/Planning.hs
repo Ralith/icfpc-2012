@@ -50,31 +50,6 @@ planner world = do
         Nothing -> yield AbortAction
         Just world -> planner world
 
-imminentDanger :: World -> (Int,Int) -> Bool
-imminentDanger world position
-    | Just RockCell{} <- worldNearbyCell world position Up
-    , Just cellL <- worldNearbyCell world position Left
-    , Just cellR <- worldNearbyCell world position Right
-    , Just cellD <- worldNearbyCell world position Down
-    = not (cellSafe cellL Left || cellSafe cellR Right || cellSafe cellD Down)
-    | otherwise = False
-  where
-    cellSafe cell direction
-        | RockCell{} <- cell
-            = boulderMovable world position direction
-        | otherwise = not (cellSolid cell)
-
-
-cellSolid :: Cell -> Bool
-cellSolid EarthCell = False
-cellSolid EmptyCell = False
-cellSolid _         = True
-
-boulderMovable :: World -> (Int,Int) -> Direction -> Bool
-boulderMovable world pos dir
-    | Just EmptyCell <- worldNearbyCell world pos dir = True
-    | otherwise = False
-
 
 nextGoal :: World -> Bool -> (Int, Int) -> Maybe (Int, Int)
 nextGoal world liftOpen startPosition =
@@ -155,5 +130,27 @@ routeIsSafe world robotPosition (direction:rest) =
            _ -> False
 
 
-imminentDanger :: World -> (Int, Int) -> Bool
-imminentDanger world robotPosition = False
+imminentDanger :: World -> (Int,Int) -> Bool
+imminentDanger world position
+    | Just RockCell{} <- worldNearbyCell world position Up
+    , Just cellL <- worldNearbyCell world position Left
+    , Just cellR <- worldNearbyCell world position Right
+    , Just cellD <- worldNearbyCell world position Down
+    = not (cellSafe cellL Left || cellSafe cellR Right || cellSafe cellD Down)
+    | otherwise = False
+  where
+    cellSafe cell direction
+        | RockCell{} <- cell
+            = boulderMovable world position direction
+        | otherwise = not (cellSolid cell)
+
+
+cellSolid :: Cell -> Bool
+cellSolid EarthCell = False
+cellSolid EmptyCell = False
+cellSolid _         = True
+
+boulderMovable :: World -> (Int,Int) -> Direction -> Bool
+boulderMovable world pos dir
+    | Just EmptyCell <- worldNearbyCell world pos dir = True
+    | otherwise = False
