@@ -239,6 +239,18 @@ worldNearbyCell
 worldNearbyCell world index movement =
   worldCell world $ applyMovement movement index
 
+robotSubmerged :: World -> Bool
+robotSubmerged world =
+    let (width, _) = worldSize world
+    in any (\cell ->
+                case cell of
+                  Just RobotCell -> True
+                  _ -> False) $
+    concatMap (\rowIndex ->
+               map (\columnIndex -> worldCell world (columnIndex, rowIndex))
+                   [0 .. width - 1])
+              [0 .. worldFloodingLevel world]
+
 
 visualize :: World -> IO ()
 visualize world = do
@@ -300,9 +312,23 @@ advanceWorld world action =
                                        | otherwise -> Nothing
                                        | otherwise -> Nothing)
                     allIndices
-  in world {
-         worldData = makeWorldData size $ map (advanceCell world) allIndices
-       }
+  in advanceWater $ world { worldData = makeWorldData size $
+                                        map (advanceCell world) allIndices
+                          }
+
+
+advanceWater :: World -> World
+advanceWater world =
+    let floodFactor = if worldFloodingTicks world >= worldFloodingTicksPerLevel world - 1 then 1 else 0
+    in world { worldFloodingLevel = if worldFloodingTicksPerLevel world /= 0
+                                    then worldFloodingLevel world + floodFactor
+                                    else 0,
+               worldFloodingTicks = (worldFloodingTicks world + 1) * floodFactor,
+               worldDrowningDuration = 0,
+               worldDrowningTicks = if robotSubmerged world
+                                    then 1 + worldDrowningTicks world
+                                    else 0
+             }
 
 
 advanceCell :: World -> (Int, Int) -> ((Int, Int), Cell)
