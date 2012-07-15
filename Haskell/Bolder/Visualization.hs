@@ -41,6 +41,8 @@ visualize result = do
                                                ++ [['A'..'I'] !! id] --[['Ⓐ'..'Ⓘ'] !! id]
                           TargetCell id -> "\x1B[22;" ++ background ++ ";35m"
                                            ++ [['1'..'9'] !! id] --[['①'..'⑨'] !! id]
+                          BeardCell -> "\x1B[22;" ++ background ++ ";37m⊎"
+                          RazorCell -> "\x1B[22;" ++ background ++ ";37m𐌕"
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
                  [1 .. width]

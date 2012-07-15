@@ -65,6 +65,8 @@ data Cell
   | EmptyCell
   | TrampolineCell Int
   | TargetCell Int
+  | BeardCell
+  | RazorCell
   deriving (Eq, Ord, Show)
 
 
@@ -113,17 +115,19 @@ oppositeDirection Down = Up
 
 
 encodeCell :: Cell -> Word8
-encodeCell  RobotCell              = 1
-encodeCell  WallCell               = 2
+encodeCell  RobotCell             = 1
+encodeCell  WallCell              = 2
 encodeCell (RockCell False)       = 3
 encodeCell (RockCell True)        = 4
-encodeCell  LambdaCell             = 5
+encodeCell  LambdaCell            = 5
 encodeCell (LambdaLiftCell False) = 6
 encodeCell (LambdaLiftCell True)  = 7
-encodeCell  EarthCell              = 8
-encodeCell  EmptyCell              = 9
+encodeCell  EarthCell             = 8
+encodeCell  EmptyCell             = 9
 encodeCell (TrampolineCell index) = 10 + (toEnum index)
 encodeCell (TargetCell index)     = 20 + (toEnum index)
+encodeCell  BeardCell             = 31
+encodeCell  RazorCell             = 32
 
 
 decodeCell :: Word8 -> Cell
@@ -136,6 +140,8 @@ decodeCell 6  = LambdaLiftCell False
 decodeCell 7  = LambdaLiftCell True
 decodeCell 8  = EarthCell
 decodeCell 9  = EmptyCell
+decodeCell 31 = BeardCell
+decodeCell 32 = RazorCell
 decodeCell c
     | c >= 10
     , c <  20   = TrampolineCell $ (fromEnum c) - 10
@@ -281,6 +287,8 @@ readCell '\\' = LambdaCell
 readCell 'L'  = LambdaLiftCell False
 readCell 'O'  = LambdaLiftCell True
 readCell '.'  = EarthCell
+readCell 'W'  = BeardCell
+readCell '!'  = RazorCell
 readCell ' '  = EmptyCell
 readCell c = fromMaybe WallCell
              $       (findIndex (== c) ['A'..'I'] >>= return . TrampolineCell)
@@ -290,6 +298,7 @@ readCell c = fromMaybe WallCell
 cellEnterable :: Cell -> Bool
 cellEnterable LambdaCell              = True
 cellEnterable EarthCell               = True
+cellEnterable RazorCell               = True
 cellEnterable (TrampolineCell _)      = True
 cellEnterable (LambdaLiftCell True)   = True
 cellEnterable cell | cellIsEmpty cell = True
