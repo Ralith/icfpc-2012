@@ -62,6 +62,7 @@ visualize result = do
               : (T.pack $ (show $ worldDrowningTicks world)
                       ++ "/" ++ (show $ worldDrowningDuration world)
                              ++ " drowned")
+              : (T.pack $ (show $ worldRazors world) ++ " razors")
               : case result of
                   Step _        -> ""
                   Win _         -> "Win!"
