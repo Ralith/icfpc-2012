@@ -33,18 +33,8 @@ data Route =
 
 planner :: (Monad m) => World -> Source m Action
 planner world = do
-  let allIndices = worldIndices world
-      (liftOpen, maybeRobotPosition) =
-        foldl' (\(liftOpen, maybeRobotPosition) index ->
-                  case fromMaybe EmptyCell $ worldCell world index of
-                    LambdaCell -> (False, maybeRobotPosition)
-                    RobotCell -> (liftOpen, Just index)
-                    _ -> (liftOpen, maybeRobotPosition))
-               (True, Nothing)
-               allIndices
   fromMaybe (yield AbortAction) $ do
-    robotPosition <- maybeRobotPosition
-    route <- nextRoute world liftOpen robotPosition
+    route <- nextRoute world
     return $ do
       maybeWorld <-
         foldM (\maybeWorld direction -> do
@@ -63,13 +53,13 @@ planner world = do
         Just world -> planner world
 
 
-nextRoute :: World -> Bool -> Location -> Maybe Route
-nextRoute world liftOpen startPosition = do
-  route <- nextRoute' world liftOpen startPosition
+nextRoute :: World -> Maybe Route
+nextRoute world = do
+  route <- nextRoute' world
   case routeProblems route of
     [] -> Just route
     (problem : rest) -> do
-      resolution <- resolveProblem world problem startPosition
+      resolution <- resolveProblem world problem
       world <- foldM (\world direction -> do
                         let action = MoveAction direction
                         case advanceWorld' world action of
@@ -91,22 +81,22 @@ nextRoute world liftOpen startPosition = do
       case maybeRobotPosition of
         Nothing -> Nothing
         Just robotPosition -> do
-          next <- nextRoute world liftOpen robotPosition
+          next <- nextRoute world
           Just $ concatRoutes [resolution, next]
 
 
-nextRoute' :: World -> Bool -> Location -> Maybe Route
-nextRoute' world liftOpen startPosition =
+nextRoute' :: World -> Maybe Route
+nextRoute' world =
   fmap (\(route, _, _) -> route)
    $ foldl'
        (\maybeBestSoFar index ->
           let goalHere = case fromMaybe WallCell $ worldCell world index of
                            LambdaCell -> True
-                           LambdaLiftCell _ | liftOpen -> True
+                           LambdaLiftCell True -> True
                            _ -> False
-              candidate = easyRoute world startPosition index >>=
+              candidate = easyRoute world index >>=
                           (\route ->
-                             if routeIsSafe world startPosition route
+                             if routeIsSafe world route
                                then Just (route,
                                           routeLength world route,
                                           routeDifficulty world route)
@@ -127,15 +117,15 @@ nextRoute' world liftOpen startPosition =
       (worldIndices world)
 
 
-resolveProblem :: World -> Problem -> Location -> Maybe Route
-resolveProblem world (RockInTheWayProblem rockLocation) startPosition = do
-  route <- easyRoute world startPosition (applyMovement Down rockLocation)
+resolveProblem :: World -> Problem -> Maybe Route
+resolveProblem world (RockInTheWayProblem rockLocation) = do
+  route <- easyRoute world (applyMovement Down rockLocation)
   route <- return $ appendToRoute route Left
   return route
 
 
-easyRoute :: World -> Location -> Location -> Maybe Route
-easyRoute world startPosition endPosition =
+easyRoute :: World -> Location -> Maybe Route
+easyRoute world endPosition =
   let loop :: Map Location Route -> Maybe Route
       loop routes =
         case Map.lookup endPosition routes of
@@ -193,21 +183,19 @@ easyRoute world startPosition endPosition =
                      (worldToList world)
 
 
-routeIsSafe :: World -> Location -> Route -> Bool
-routeIsSafe world robotPosition route =
-  let directionsAreSafe world robotPosition [] =
-        not $ deadly world robotPosition
-      directionsAreSafe world robotPosition (direction:rest) =
-        if deadly world robotPosition
+routeIsSafe :: World -> Route -> Bool
+routeIsSafe world route =
+  let directionsAreSafe world [] =
+        not $ deadly world (worldRobotPosition world)
+      directionsAreSafe world (direction:rest) =
+        if deadly world (worldRobotPosition world)
           then False
           else case advanceWorld' world $ MoveAction direction of
                  Step newWorld ->
-                   directionsAreSafe newWorld
-                                     (applyMovement direction robotPosition)
-                                     rest
+                   directionsAreSafe newWorld rest
                  Win _ -> True
                  _ -> False
-  in directionsAreSafe world robotPosition (routeDirections route)
+  in directionsAreSafe world (routeDirections route)
 
 
 deadly :: World -> Location -> Bool
