@@ -7,7 +7,7 @@ module Bolder.World
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellPushable, cellIsEmpty,
-     isLambdaCell, worldTicksL, worldDataL, Word8Image,
+     isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, Word8Image,
      encodeCell, decodeCell)
     where
 
@@ -43,6 +43,7 @@ data World =
       worldRobotPosition :: Location,
       worldLiftPosition :: Location,
       worldBeardRate :: Int,
+      worldBeardState :: Int,
       worldRazors :: Int
     }
     deriving (Show, Eq)
@@ -53,6 +54,9 @@ worldTicksL = lens worldTicks (\x w -> w {worldTicks = x})
 
 worldDataL :: Lens World Word8Image
 worldDataL = lens worldData (\x w -> w {worldData = x})
+
+worldBeardStateL :: Lens World Int
+worldBeardStateL = lens worldBeardState (\x w -> w {worldBeardState = x})
 
 
 data Cell
@@ -239,6 +243,7 @@ parseWorld text  =
                      return (Map.insert          trampId targLoc    trampmap,
                              Map.insertWith (++) targId  [trampLoc] targmap))
                  (Map.empty, Map.empty) $ fromMaybe [] $ Map.lookup "Trampoline" keys
+      beardRate = maybe 25 (read . T.unpack. (!! 0)) $ Map.lookup "Growth" keys
   in World { worldData = makeWorldData (width, height) associations,
              worldTicks = 0,
              worldFloodingLevel =
@@ -257,8 +262,8 @@ parseWorld text  =
              worldLiftPosition = fromMaybe (1,1) $ fmap fst
                                  $ find ((\x -> x == (LambdaLiftCell False)
                                              || x == (LambdaLiftCell True)) . snd) associations,
-             worldBeardRate =
-                 maybe 25 (read . T.unpack. (!! 0)) $ Map.lookup "Growth" keys,
+             worldBeardRate = beardRate,
+             worldBeardState = beardRate - 1,
              worldRazors =
                  maybe 0 (read . T.unpack . (!! 0)) $ Map.lookup "Razors" keys
            }

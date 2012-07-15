@@ -8,6 +8,7 @@ module Bolder.Simulation (
     cellEnterable,
     isLiftOpen,
     points,
+    allNeighborPaths,
     Circumstance(..)) where
 
 import Prelude hiding (Either(..))
@@ -79,6 +80,8 @@ advanceWorld action = do
   size@(width, height) <- gets worldSize
   allIndices           <- gets worldIndices 
   robotPosition        <- gets worldRobotPosition
+  beardState           <- gets worldBeardState
+  beardRate            <- gets worldBeardRate
   modify (advanceRobot action)
   
   liftOpen             <- gets $ flip isLiftOpen  allIndices
@@ -90,6 +93,9 @@ advanceWorld action = do
   --update the world data
   modify $ setL worldDataL newWorldData
   incTicks
+  if beardState == 0
+  then modify $ worldBeardStateL ^= beardRate - 1
+  else modify $ worldBeardStateL ^-= 1
         
   modify $ advanceWater (snd robotPosition)
           
@@ -176,20 +182,33 @@ advanceCell world liftOpen index =
    in if cellFalls cell
       then advanceFallCell world cell index
       else if cellIsEmpty cell
-           then fromMaybe cell
-                    $ foldl' (\soFar path ->
-                              mplus soFar $
-                                    case worldNearbyCell world index path of
-                                      Just cellAbove
-                                          | cellFalls cellAbove
-                                          , fallPossible world (Just path)
-                                                (applyMovement path index) ->
-                                              Just $ cellAfterFalling cellAbove
-                                      _ -> Nothing)
-                    Nothing [[Up], [Up, Left], [Up, Right]]
+           then if adjacentBeardGrows index world
+                then BeardCell
+                else fromMaybe cell
+                         $ foldl' (\soFar path ->
+                                       mplus soFar $
+                                             case worldNearbyCell world index path of
+                                               Just cellAbove
+                                                   | cellFalls cellAbove
+                                                   , fallPossible world (Just path)
+                                                     (applyMovement path index) ->
+                                                         Just $ cellAfterFalling cellAbove
+                                               _ -> Nothing)
+                         Nothing [[Up], [Up, Left], [Up, Right]]
            else if (cell == LambdaLiftCell False) && liftOpen
                   then LambdaLiftCell True
                   else cell)
+
+adjacentBeardGrows :: Location -> World -> Bool
+adjacentBeardGrows location world =
+    worldBeardState world == 0
+    && any (== BeardCell) (map ((fromMaybe WallCell) . worldNearbyCell world location) allNearbyPaths)
+
+allNeighborPaths :: [[Direction]]
+allNeighborPaths = [[Up], [Down], [Left], [Right]]
+
+allNearbyPaths = allNeighborPaths ++ [[Up,   Left], [Up,   Right],
+                                      [Down, Left], [Down, Right]]
 
 fallPossible :: World -> Maybe [Direction] -> Location -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of
