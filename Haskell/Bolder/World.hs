@@ -41,7 +41,9 @@ data World =
       worldTrampolines :: Map.Map Int Location,
       worldTargets :: Map.Map Int [Location],
       worldRobotPosition :: Location,
-      worldLiftPosition :: Location
+      worldLiftPosition :: Location,
+      worldBeardRate :: Int,
+      worldRazors :: Int
     }
     deriving (Show, Eq)
 
@@ -206,14 +208,6 @@ parseWorld text  =
                                    value = T.tail rest
                                in (key, [value]))
                      headerLines
-      floodingLevel =
-        maybe 0 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Water" keys
-      floodingTicksPerLevel =
-        maybe 0 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Flooding" keys
-      floodingTicks = 0
-      drowningDuration =
-        maybe 10 (read . T.unpack) $ fmap (!! 0) $ Map.lookup "Waterproof" keys
-      drowningTicks = 0
       associations =
        concat
        $ zipWith (\lineText rowIndex ->
@@ -241,11 +235,14 @@ parseWorld text  =
                  (Map.empty, Map.empty) $ fromMaybe [] $ Map.lookup "Trampoline" keys
   in World { worldData = makeWorldData (width, height) associations,
              worldTicks = 0,
-             worldFloodingLevel = floodingLevel,
-             worldFloodingTicksPerLevel = floodingTicksPerLevel,
-             worldFloodingTicks = floodingTicks,
-             worldDrowningDuration = drowningDuration,
-             worldDrowningTicks = drowningTicks,
+             worldFloodingLevel =
+                 maybe 0 (read . T.unpack. (!! 0)) $ Map.lookup "Water" keys,
+             worldFloodingTicksPerLevel =
+                 maybe 0 (read . T.unpack. (!! 0)) $ Map.lookup "Flooding" keys,
+             worldFloodingTicks = 0,
+             worldDrowningDuration =
+                 maybe 10 (read . T.unpack. (!! 0)) $ Map.lookup "Waterproof" keys,
+             worldDrowningTicks = 0,
              worldLambdasCollected = 0,
              worldTrampolines = trampolines,
              worldTargets = targets,
@@ -253,7 +250,11 @@ parseWorld text  =
                                   $ find ((== RobotCell) . snd) associations,
              worldLiftPosition = fromMaybe (1,1) $ fmap fst
                                  $ find ((\x -> x == (LambdaLiftCell False)
-                                             || x == (LambdaLiftCell True)) . snd) associations
+                                             || x == (LambdaLiftCell True)) . snd) associations,
+             worldBeardRate =
+                 maybe 25 (read . T.unpack. (!! 0)) $ Map.lookup "Growth" keys,
+             worldRazors =
+                 maybe 0 (read . T.unpack . (!! 0)) $ Map.lookup "Razors" keys
            }
 
 
