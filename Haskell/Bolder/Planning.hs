@@ -3,6 +3,7 @@ module Bolder.Planning (planner) where
 import Prelude hiding (Either(..))
 
 import Control.Monad
+import Control.Monad.ST
 import Data.Conduit
 import qualified Data.Conduit.Binary as C hiding (lines)
 import qualified Data.Conduit.Text as C
@@ -21,12 +22,13 @@ import Debug.Trace
 
 data Problem
   = RockInTheWayProblem Location
+  | BeardInTheWayProblem Location
   deriving (Eq, Ord)
 
 
 data Route =
   Route {
-      routeDirections :: [Direction],
+      routeActions :: [Action],
       routeProblems :: [Problem]
     }
 
@@ -37,17 +39,16 @@ planner world = do
     route <- nextRoute world
     return $ do
       maybeWorld <-
-        foldM (\maybeWorld direction -> do
+        foldM (\maybeWorld action -> do
                  case maybeWorld of
                    Nothing -> return Nothing
                    Just world -> do
-                     let action = MoveAction direction
                      yield action
                      case advanceWorld' world action of
                        Step newWorld -> return $ Just newWorld
                        _ -> return Nothing)
               (Just world)
-              (routeDirections route)
+              (routeActions route)
       case maybeWorld of
         Nothing -> yield AbortAction
         Just world -> planner world
@@ -58,17 +59,17 @@ nextRoute world = do
   route <- nextRoute' world
   case routeProblems route of
     [] -> Just route
+{-
     (problem : rest) -> do
-      resolution <- resolveProblem world problem
-      world <- foldM (\world direction -> do
-                        let action = MoveAction direction
+      -- candidateResolutions <- resolveProblem world problem
+      world <- foldM (\world action -> do
                         case advanceWorld' world action of
                           Step newWorld -> Just newWorld
                           Win newWorld -> Just newWorld
                           Abort newWorld -> Just newWorld
                           _ -> Nothing)
                      world
-                     (routeDirections route)
+                     (routeActions route)
       let allIndices = worldIndices world
           (liftOpen, maybeRobotPosition) =
             foldl' (\(liftOpen, maybeRobotPosition) index ->
@@ -83,10 +84,25 @@ nextRoute world = do
         Just robotPosition -> do
           next <- nextRoute world
           Just $ concatRoutes [resolution, next]
+-}
+    _ -> Nothing
 
 
 nextRoute' :: World -> Maybe Route
 nextRoute' world =
+  runST $ floodWorld (\location cell -> cell == LambdaCell)
+                     world
+                     (worldRobotPosition world)
+        $$ C.consume
+           >>= return . listToMaybe
+           >>= return
+               . fmap (\directions ->
+                         Route {
+                             routeActions = map MoveAction directions,
+                             routeProblems = []
+                           })
+
+{-
   fmap (\(route, _, _) -> route)
    $ foldl'
        (\maybeBestSoFar index ->
@@ -115,13 +131,52 @@ nextRoute' world =
                else maybeBestSoFar)
       Nothing
       (worldIndices world)
+-}
 
 
-resolveProblem :: World -> Problem -> Maybe Route
-resolveProblem world (RockInTheWayProblem rockLocation) = do
-  route <- easyRoute world (applyMovement Down rockLocation)
-  route <- return $ appendToRoute route Left
-  return route
+resolveProblem :: World -> Problem -> [Route]
+resolveProblem world (RockInTheWayProblem rockLocation) =
+  let maybeRouteToBelow = easyRoute world (applyMovement Down rockLocation)
+      maybeRouteToLeft = easyRoute world (applyMovement Left rockLocation)
+      maybeRouteToRight = easyRoute world (applyMovement Right rockLocation)
+  in catMaybes [do
+                  route <- maybeRouteToBelow
+                  return $ appendToRoute route Left,
+                do
+                  route <- maybeRouteToBelow
+                  return $ appendToRoute route Right,
+                do
+                  route <- maybeRouteToLeft
+                  return $ appendToRoute route Right,
+                do
+                  route <- maybeRouteToRight
+                  return $ appendToRoute route Left]
+resolveProblem world (BeardInTheWayProblem rockLocation) =
+  catMaybes
+    [do
+       route <- easyRoute world (applyMovement Down rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement Left rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement Right rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement Up rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement [Down, Left] rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement [Down, Right] rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement [Up, Left] rockLocation)
+       return $ appendShaveToRoute route,
+     do
+       route <- easyRoute world (applyMovement [Up, Right] rockLocation)
+       return $ appendShaveToRoute route]
 
 
 easyRoute :: World -> Location -> Maybe Route
@@ -185,17 +240,16 @@ easyRoute world endPosition =
 
 routeIsSafe :: World -> Route -> Bool
 routeIsSafe world route =
-  let directionsAreSafe world [] =
+  let actionsAreSafe world [] =
         not $ deadly world (worldRobotPosition world)
-      directionsAreSafe world (direction:rest) =
+      actionsAreSafe world (action:rest) =
         if deadly world (worldRobotPosition world)
           then False
-          else case advanceWorld' world $ MoveAction direction of
-                 Step newWorld ->
-                   directionsAreSafe newWorld rest
+          else case advanceWorld' world action of
+                 Step newWorld -> actionsAreSafe newWorld rest
                  Win _ -> True
                  _ -> False
-  in directionsAreSafe world (routeDirections route)
+  in actionsAreSafe world (routeActions route)
 
 
 deadly :: World -> Location -> Bool
@@ -217,7 +271,7 @@ deadly world position
 emptyRoute :: Route
 emptyRoute =
   Route {
-      routeDirections = [],
+      routeActions = [],
       routeProblems = []
     }
 
@@ -225,7 +279,21 @@ emptyRoute =
 appendToRoute :: Route -> Direction -> Route
 appendToRoute route direction =
   route {
-      routeDirections = routeDirections route ++ [direction]
+      routeActions = routeActions route ++ [MoveAction direction]
+    }
+
+
+appendWaitToRoute :: Route -> Route
+appendWaitToRoute route =
+  route {
+      routeActions = routeActions route ++ [WaitAction]
+    }
+
+
+appendShaveToRoute :: Route -> Route
+appendShaveToRoute route =
+  route {
+      routeActions = routeActions route ++ [ShaveAction]
     }
 
 
@@ -239,7 +307,7 @@ addProblemToRoute route problem =
 concatRoutes :: [Route] -> Route
 concatRoutes routes =
   Route {
-      routeDirections = concat $ map routeDirections routes,
+      routeActions = concat $ map routeActions routes,
       routeProblems = concat $ map routeProblems routes
     }
 
@@ -252,7 +320,7 @@ cellProblemOfTraversing _ _ = Nothing
 
 routeLength :: World -> Route -> Int
 routeLength world route =
-  length $ routeDirections route
+  length $ routeActions route
 
 
 routeDifficulty :: World -> Route -> Int

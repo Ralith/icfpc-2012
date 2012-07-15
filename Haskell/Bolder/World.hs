@@ -9,7 +9,8 @@ module Bolder.World
      cellEnterable, cellPushable, cellIsEmpty,
      isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, worldRazorsL,
      Word8Image,
-     encodeCell, decodeCell)
+     encodeCell, decodeCell,
+     floodWorld)
     where
 
 import Prelude hiding (Either(..))
