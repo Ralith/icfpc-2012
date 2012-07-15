@@ -6,7 +6,7 @@ module Bolder.World
      worldToList,
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
-     cellEnterable, cellPushable, cellIsEmpty,
+     cellEnterable, cellPushable, cellIsEmpty, cellFalls,
      isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, worldRazorsL,
      Word8Image,
      encodeCell, decodeCell,
@@ -328,6 +328,11 @@ cellPushable _ = False
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
 cellIsEmpty _         = False
+
+
+cellFalls :: Cell -> Bool
+cellFalls (RockCell _) = True
+cellFalls _ = False
 
 
 floodWorld :: (Location -> Cell -> Bool) -> World -> Location -> Source (ST s) [Direction]

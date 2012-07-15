@@ -285,11 +285,6 @@ advanceFallCell world cell index =
   if fallPossible world Nothing index then EmptyCell else cellAtRest cell
 
 
-cellFalls :: Cell -> Bool
-cellFalls (RockCell _) = True
-cellFalls _ = False
-
-
 cellAtRest :: Cell -> Cell
 cellAtRest (RockCell _) = RockCell False
 cellAtRest cell = cell
