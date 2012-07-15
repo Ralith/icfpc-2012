@@ -123,6 +123,11 @@ advanceRobot action world =
                                        worldRobotPosition    = prospectivePosition })
                               [(robotPosition, EmptyCell),
                                (prospectivePosition, RobotCell)]
+              RazorCell ->
+                  mutateWorld (world { worldRazors        = worldRazors world + 1,
+                                       worldRobotPosition = prospectivePosition })
+                              [(robotPosition, EmptyCell),
+                               (prospectivePosition, RobotCell)]
               TrampolineCell id ->
                   let targetPosition = fromMaybe (error "Invalid target")
                                        $ Map.lookup id $ worldTrampolines world
