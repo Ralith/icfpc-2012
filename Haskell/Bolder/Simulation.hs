@@ -59,23 +59,13 @@ getCircumstances indices world =
                             indices        
 
 
-getRobotPosition :: [Location] -> World -> Location                                    
-getRobotPosition indices world  = 
-    foldl' (\robotPosition index ->
-           case fromMaybe EmptyCell $ worldCell world index of
-             LambdaCell -> robotPosition
-             RobotCell -> index
-             _ -> robotPosition)
-       (1, 1)
-       indices 
-
-
-isRobotCrushed :: Action -> World -> Location -> World -> Bool       
-isRobotCrushed action oldWorld robotPosition newWorld  = 
-    Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
-       || action == MoveAction Down
-       && cellFalls (fromMaybe EmptyCell 
-                (worldNearbyCell oldWorld robotPosition Up))          
+isRobotCrushed :: Action -> World -> World -> Bool       
+isRobotCrushed action oldWorld newWorld  =
+    let robotPosition = worldRobotPosition oldWorld
+    in Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
+           || action == MoveAction Down
+           && cellFalls (fromMaybe EmptyCell 
+                         (worldNearbyCell oldWorld robotPosition Up))          
 
 incTicks :: Context ()
 incTicks = modify (worldTicksL ^+= 1)
@@ -87,8 +77,8 @@ advanceWorld :: Action -> Context StepResult
 advanceWorld action = do
   size@(width, height) <- gets worldSize
   allIndices           <- gets worldIndices 
-  robotPosition        <- gets $ getRobotPosition allIndices
-  modify (advanceRobot robotPosition action)
+  robotPosition        <- gets worldRobotPosition
+  modify (advanceRobot action)
   
   liftOpen             <- gets $ flip isLiftOpen  allIndices
   circumstances        <- gets $ getCircumstances allIndices
@@ -102,7 +92,7 @@ advanceWorld action = do
         
   modify $ advanceWater (snd robotPosition)
           
-  robotCrushed <- gets $ isRobotCrushed action oldWorld robotPosition
+  robotCrushed <- gets $ isRobotCrushed action oldWorld
   world        <- get
 
   if action == AbortAction
@@ -111,12 +101,15 @@ advanceWorld action = do
           then return $ LossDrowned world
           else if robotCrushed
                then return $ LossCrushed world
-               else return $ Step world
+               else if (worldRobotPosition world) == (worldLiftPosition world)
+                    then return $ Win world
+                    else return $ Step world
 
 
-advanceRobot :: Location -> Action -> World -> World
-advanceRobot robotPosition action world =
-  let prospectivePosition =
+advanceRobot :: Action -> World -> World
+advanceRobot action world =
+  let robotPosition = worldRobotPosition world
+      prospectivePosition =
         case action of
           MoveAction direction -> applyMovement direction robotPosition
           _ -> robotPosition
@@ -125,7 +118,8 @@ advanceRobot robotPosition action world =
   in if effective
        then case priorOccupant of
               LambdaCell ->
-                  mutateWorld (world { worldLambdasCollected = worldLambdasCollected world + 1})
+                  mutateWorld (world { worldLambdasCollected = worldLambdasCollected world + 1,
+                                       worldRobotPosition    = prospectivePosition })
                               [(robotPosition, EmptyCell),
                                (prospectivePosition, RobotCell)]
               TrampolineCell id ->
@@ -139,11 +133,13 @@ advanceRobot robotPosition action world =
                   in mutateWorld (world {
                                     worldTrampolines = foldl' (flip Map.delete) (worldTrampolines world)
                                                        $ map trampLocToId trampLocs,
-                                    worldTargets = Map.delete targetId targets})
+                                    worldTargets = Map.delete targetId targets,
+                                    worldRobotPosition = targetPosition})
                                $ [(robotPosition, EmptyCell),
                                   (targetPosition, RobotCell)]
                                ++ map (flip (,) EmptyCell) trampLocs
-              _ -> mutateWorld world [(robotPosition, EmptyCell), (prospectivePosition, RobotCell)]
+              _ -> mutateWorld world { worldRobotPosition = prospectivePosition }
+                   [(robotPosition, EmptyCell), (prospectivePosition, RobotCell)]
        else world
 
 

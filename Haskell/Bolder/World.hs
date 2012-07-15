@@ -39,7 +39,9 @@ data World =
       worldDrowningTicks :: Int,
       worldLambdasCollected :: Int,
       worldTrampolines :: Map.Map Int Location,
-      worldTargets :: Map.Map Int [Location]
+      worldTargets :: Map.Map Int [Location],
+      worldRobotPosition :: Location,
+      worldLiftPosition :: Location
     }
     deriving (Show, Eq)
 
@@ -246,7 +248,12 @@ parseWorld text  =
              worldDrowningTicks = drowningTicks,
              worldLambdasCollected = 0,
              worldTrampolines = trampolines,
-             worldTargets = targets
+             worldTargets = targets,
+             worldRobotPosition = fromMaybe (1,1) $ fmap fst
+                                  $ find ((== RobotCell) . snd) associations,
+             worldLiftPosition = fromMaybe (1,1) $ fmap fst
+                                 $ find ((\x -> x == (LambdaLiftCell False)
+                                             || x == (LambdaLiftCell True)) . snd) associations
            }
 
 
@@ -283,6 +290,7 @@ cellEnterable :: Cell -> Bool
 cellEnterable LambdaCell              = True
 cellEnterable EarthCell               = True
 cellEnterable (TrampolineCell _)      = True
+cellEnterable (LambdaLiftCell True)   = True
 cellEnterable cell | cellIsEmpty cell = True
                    | otherwise        = False
 
