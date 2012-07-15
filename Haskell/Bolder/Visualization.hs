@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Bolder.Visualization (visualize) where
 
 import Data.Maybe
@@ -5,10 +6,17 @@ import qualified Data.Text as T
 import System.IO
 
 import Bolder.World
+import Bolder.Simulation
 
-visualize :: World -> [T.Text] -> IO ()
-visualize world debugInformation = do
-  let (width, height) = worldSize world
+visualize :: StepResult -> IO ()
+visualize result = do
+  let world = case result of
+                Step w -> w
+                Abort w -> w
+                LossCrushed w -> w
+                LossDrowned w -> w
+                Win w -> w
+      (width, height) = worldSize world
       water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
   mapM_ (\rowIndex -> do
@@ -46,14 +54,18 @@ visualize world debugInformation = do
             putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
                      ++ (show informationStartColumn) ++ "f"
                      ++ (T.unpack line))
-        (zip [1 ..]
+        (zip [2 ..]
              (  (T.pack $ (show ticks) ++ " ticks")
-              : (T.pack $ (show $ lambdas * 25 - ticks) ++ " points")
-              : (T.pack $ "  " ++ (show $ lambdas * 50 - ticks) ++ " on abort")
-              : (T.pack $ "  " ++ (show $ lambdas * 75 - ticks) ++ " on win")
+              : (T.pack $ (show $ points result)  ++ " points")
               : (T.pack $ (show $ worldDrowningTicks world)
                       ++ "/" ++ (show $ worldDrowningDuration world)
                              ++ " drowned")
-              : debugInformation))
+              : case result of
+                  Step _        -> ""
+                  Win _         -> "Win!"
+                  Abort _       -> "Abort"
+                  LossCrushed _ -> "Loss: Crushed"
+                  LossDrowned _ -> "Loss: Crushed"
+              : []))
   putStr $ "\x1B[" ++ (show $ height + 2) ++ ";1f"
   hFlush stdout

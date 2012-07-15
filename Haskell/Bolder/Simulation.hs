@@ -7,6 +7,7 @@ module Bolder.Simulation (
     fallPossible, 
     cellEnterable,
     isLiftOpen,
+    points,
     Circumstance(..)) where
 
 import Prelude hiding (Either(..))
@@ -235,3 +236,11 @@ cellAtRest cell = cell
 cellAfterFalling :: Cell -> Cell
 cellAfterFalling (RockCell _) = RockCell True
 cellAfterFalling cell = cell
+
+
+points :: StepResult -> Int
+points (Step w)        = (worldLambdasCollected w) * 25 - (worldTicks w)
+points (Abort w)       = (worldLambdasCollected w) * 50 - (worldTicks w)
+points (Win w)         = (worldLambdasCollected w) * 75 - (worldTicks w)
+points (LossDrowned w) = points $ Step w
+points (LossCrushed w) = points $ Step w

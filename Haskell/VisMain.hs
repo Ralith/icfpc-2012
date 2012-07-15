@@ -34,31 +34,19 @@ main = do
   case parameters of
     [worldFilePath] -> do
       world <- readWorld worldFilePath
-      visualize world []
+      visualize $ Step world
       let actionSource = if maybe False (== "2") debug
                          then C.sourceHandle stdin $= extractAction
                          else planner world $= slower
       runResourceT $ actionSource
                    $$ C.foldM (\world action -> do
                                   when (maybe False (== "1") debug) (lift $ void getLine)
-                                  let result = advanceWorld' world action 
+                                  let result = advanceWorld' world action
+                                  lift $ visualize result
                                   case result of
-                                    Step world' -> do
-                                      lift $ visualize world' []
-                                      return world'
-                                    Win world' -> do
-                                      lift $ visualize world' ["Win"]
-                                      lift $ exitSuccess
-                                    Abort world' -> do
-                                      lift $ visualize world' ["Abort"]
-                                      lift $ exitSuccess
-                                    LossDrowned world' -> do
-                                      lift $ visualize world' ["Lost: Drowned"]
-                                      lift $ exitSuccess
-                                    LossCrushed world' -> do
-                                      lift $ visualize world' ["Lost: Crushed"]
-                                      lift $ exitSuccess)
-                              world
+                                    Step world' -> return world'
+                                    _           -> lift $ exitSuccess)
+                               world
       exitSuccess
     _ -> do
       putStrLn $ "Usage: bolder input.map"
