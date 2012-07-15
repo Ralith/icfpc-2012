@@ -29,9 +29,9 @@ visualize world debugInformation = do
                             "\x1B[22;" ++ background ++ ";33m□"
                           EarthCell -> "\x1B[22;" ++ earthBackground ++ "m "
                           EmptyCell -> "\x1B[22;" ++ background ++ "m "
-                          TrampolineCell id -> "\x1B[22;" ++ background ++ "m"
+                          TrampolineCell id -> "\x1B[22;" ++ background ++ ";35m"
                                                ++ [['A'..'I'] !! id] --[['Ⓐ'..'Ⓘ'] !! id]
-                          TargetCell id -> "\x1B[22;" ++ background ++ "m"
+                          TargetCell id -> "\x1B[22;" ++ background ++ ";35m"
                                            ++ [['1'..'9'] !! id] --[['①'..'⑨'] !! id]
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
