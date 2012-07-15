@@ -7,6 +7,7 @@ module Bolder.Simulation (
     fallPossible, 
     cellEnterable,
     isLiftOpen,
+    worldPushable,
     points,
     allNeighborPaths,
     Circumstance(..)) where
@@ -126,6 +127,11 @@ advanceRobot action world =
           _ -> robotPosition
       priorOccupant = fromMaybe WallCell $ worldCell world prospectivePosition
       effective = cellEnterable priorOccupant
+                  || (case action of
+                        MoveAction direction ->
+                          cellPushable priorOccupant
+                          && worldPushable world prospectivePosition direction
+                        _ -> False)
   in if effective
        then case priorOccupant of
               LambdaCell ->
@@ -154,8 +160,17 @@ advanceRobot action world =
                                $ [(robotPosition, EmptyCell),
                                   (targetPosition, RobotCell)]
                                ++ map (flip (,) EmptyCell) trampLocs
-              _ -> mutateWorld world { worldRobotPosition = prospectivePosition }
-                   [(robotPosition, EmptyCell), (prospectivePosition, RobotCell)]
+              _ | cellPushable priorOccupant
+                , MoveAction direction <- action ->
+                 mutateWorld world { worldRobotPosition = prospectivePosition }
+                   [(robotPosition, EmptyCell),
+                    (prospectivePosition, RobotCell),
+                    (applyMovement direction prospectivePosition,
+                     priorOccupant)]
+                | otherwise ->
+                 mutateWorld world { worldRobotPosition = prospectivePosition }
+                   [(robotPosition, EmptyCell),
+                    (prospectivePosition, RobotCell)]
        else world
 
 
@@ -271,6 +286,14 @@ cellAtRest cell = cell
 cellAfterFalling :: Cell -> Cell
 cellAfterFalling (RockCell _) = RockCell True
 cellAfterFalling cell = cell
+
+
+worldPushable :: World -> Location -> Direction -> Bool
+worldPushable world position direction
+    | elem direction [Left, Right]
+    , Just cell <- worldNearbyCell world position direction
+    , cellIsEmpty cell = True
+    | otherwise = False
 
 
 points :: StepResult -> Int

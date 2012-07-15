@@ -210,14 +210,8 @@ deadly world position
   where
     cellSafe cell direction
         | cellPushable cell =
-            boulderMovable world position [direction,direction]
+          worldPushable world (applyMovement direction position) direction
         | otherwise = cellEnterable cell
-
-
-boulderMovable :: World -> (Int,Int) -> [Direction] -> Bool
-boulderMovable world pos dir
-    | Just cell <- worldNearbyCell world pos dir, cellIsEmpty cell = True
-    | otherwise = False
 
 
 emptyRoute :: Route
