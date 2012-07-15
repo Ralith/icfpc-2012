@@ -80,11 +80,11 @@ advanceWorld :: Action -> Context StepResult
 advanceWorld action = do
   size@(width, height) <- gets worldSize
   allIndices           <- gets worldIndices 
-  robotPosition        <- gets worldRobotPosition
   beardState           <- gets worldBeardState
   beardRate            <- gets worldBeardRate
   razors               <- gets worldRazors
   modify (advanceRobot action)
+  modify advanceDrowning
   
   liftOpen             <- gets $ flip isLiftOpen  allIndices
   circumstances        <- gets $ getCircumstances allIndices
@@ -102,7 +102,7 @@ advanceWorld action = do
   when (action == ShaveAction && razors > 0)
        (modify $ worldRazorsL ^-= 1)
         
-  modify $ advanceWater (snd robotPosition)
+  modify advanceWater
           
   robotCrushed <- gets $ isRobotCrushed action oldWorld
   world        <- get
@@ -174,9 +174,21 @@ advanceRobot action world =
        else world
 
 
-advanceWater :: Int -> World -> World
-advanceWater robotAltitude world =
-    let floodValue =
+advanceDrowning :: World -> World
+advanceDrowning world =
+  let robotAltitude = snd $ worldRobotPosition world
+  in world {
+         worldDrowningTicks =
+           if robotAltitude < worldFloodingLevel world
+             then worldDrowningTicks world
+             else 0
+       }
+
+
+advanceWater :: World -> World
+advanceWater world =
+    let robotAltitude = snd $ worldRobotPosition world
+        floodValue =
           if worldFloodingTicks world >= worldFloodingTicksPerLevel world - 1
             then 1
             else 0
@@ -190,7 +202,7 @@ advanceWater robotAltitude world =
            worldDrowningTicks =
              if robotAltitude < worldFloodingLevel world
                then 1 + worldDrowningTicks world
-               else 0
+               else worldDrowningTicks world
          }
 
 
