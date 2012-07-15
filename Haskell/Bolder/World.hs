@@ -329,28 +329,25 @@ cellIsEmpty EmptyCell = True
 cellIsEmpty _         = False
 
 
--- floodWorld :: (Location -> Cell -> Bool) -> World -> Location -> Source (ST s) [Direction]
--- floodWorld pred world start =
---     do traversed <- lift (newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool))
---        let helper path loc cell = do
---              when (pred loc cell) $
---                   yield (reverse path)
---              lift $ writeArray traversed loc True
---              opts <- lift $ candidates loc
---              forM_ opts
---                    (\(dir, newLoc, cell) -> helper (dir:path) newLoc cell)
---              return ()
+floodWorld :: (Location -> Cell -> Bool) -> World -> Location -> Source (ST s) [Direction]
+floodWorld pred world start =
+    do traversed <- lift (newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool))
+       let helper path loc =
+               case worldCell world loc of
+                 Just cell -> do
+                   beenHere <- lift $ readArray traversed loc
+                   if beenHere
+                   then return ()
+                   else do
+                     when (pred loc cell) $
+                          yield (reverse path)
+                     lift $ writeArray traversed loc True
+                     forM_ [Left, Right, Up, Down]
+                        (\dir -> helper (dir:path) $ applyMovement dir loc)
+                 _ -> return ()
 
---            candidates :: Location -> ST s [(Direction, Location, Cell)]
---            candidates loc = filterM (\(_, newLoc, _) -> readArray traversed newLoc) $
---                             mapMaybe (\d -> do
---                                         let newLoc = applyMovement d loc
---                                         cell <- worldCell world newLoc
---                                         Just (d, newLoc, cell))
---                             [Left, Right, Up, Down]
---        helper [] start $ fromMaybe WallCell $ worldCell world start
---        return ()
-
+       helper [] start
+       return ()
 
 
 ------------------------------------------------------------------------------------------
