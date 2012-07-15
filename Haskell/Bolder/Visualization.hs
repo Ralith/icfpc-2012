@@ -46,9 +46,8 @@ visualize world debugInformation = do
             putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
                      ++ (show informationStartColumn) ++ "f"
                      ++ (T.unpack line))
-        (zip [2 ..]
+        (zip [1 ..]
              (  (T.pack $ (show ticks) ++ " ticks")
-              : (T.pack $ (show lambdas) ++ " lambdas")
               : (T.pack $ (show $ lambdas * 25 - ticks) ++ " points")
               : (T.pack $ "  " ++ (show $ lambdas * 50 - ticks) ++ " on abort")
               : (T.pack $ "  " ++ (show $ lambdas * 75 - ticks) ++ " on win")
