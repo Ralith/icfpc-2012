@@ -7,7 +7,8 @@ module Bolder.World
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellPushable, cellIsEmpty,
-     isLambdaCell, worldTicksL, worldDataL, Word8Image)
+     isLambdaCell, worldTicksL, worldDataL, Word8Image,
+     encodeCell, decodeCell)
     where
 
 import Prelude hiding (Either(..))

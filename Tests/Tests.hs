@@ -13,6 +13,7 @@ import Data.Word
 import Test.QuickCheck.Checkers
 import Control.Arrow
 import Control.Applicative
+import qualified Data.Map as M
 --type TestName = String
 
 --isTotal :: (Arbitrary a, Eq b, Show a) => TestName -> (a -> b) -> Test
@@ -31,12 +32,16 @@ isLiftOpen' :: World -> Bool
 isLiftOpen' x = isLiftOpen x (worldIndices x)
 
 
+roundTrip :: Eq a => (a -> b) -> (b -> a) -> a -> Bool
+roundTrip f g x = (g . f) x == x 
+
 main = defaultMain [
     testGroup "update tests" [
         isTotal3 "advanceRobot is total" advanceRobot,
         isTotal2 "advanceWater is total" advanceWater,
         isTotal2 "advanceWorld' is total" advanceWorld',
-        isTotal "isLiftOpen' is total" isLiftOpen'
+        isTotal "isLiftOpen' is total" isLiftOpen',
+        testProperty "encodeCell/decodeCell" $ roundTrip encodeCell decodeCell
     ]]
 
  
@@ -44,7 +49,8 @@ main = defaultMain [
 -------------------------------------------------------------------------------------
 ----                            BoilerPlate                                     -----
 -------------------------------------------------------------------------------------
-
+instance (Arbitrary a, Ord a, Arbitrary b) => Arbitrary (M.Map a b) where
+    arbitrary = M.fromList <$> arbitrary
 
 instance Arbitrary Word8Image where
     arbitrary = do 
