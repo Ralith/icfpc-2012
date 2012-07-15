@@ -109,15 +109,15 @@ oppositeDirection Down = Up
 
 
 encodeCell :: Cell -> Word8
-encodeCell RobotCell              = 1
-encodeCell WallCell               = 2
+encodeCell  RobotCell              = 1
+encodeCell  WallCell               = 2
 encodeCell (RockCell False)       = 3
 encodeCell (RockCell True)        = 4
-encodeCell LambdaCell             = 5
+encodeCell  LambdaCell             = 5
 encodeCell (LambdaLiftCell False) = 6
 encodeCell (LambdaLiftCell True)  = 7
-encodeCell EarthCell              = 8
-encodeCell EmptyCell              = 9
+encodeCell  EarthCell              = 8
+encodeCell  EmptyCell              = 9
 encodeCell (TrampolineCell index) = 10 + (toEnum index)
 encodeCell (TargetCell index)     = 20 + (toEnum index)
 
@@ -125,8 +125,8 @@ encodeCell (TargetCell index)     = 20 + (toEnum index)
 decodeCell :: Word8 -> Cell
 decodeCell 1  = RobotCell
 decodeCell 2  = WallCell
-decodeCell 3  = RockCell False
-decodeCell 4  = RockCell True
+decodeCell 3  = RockCell       False
+decodeCell 4  = RockCell       True
 decodeCell 5  = LambdaCell
 decodeCell 6  = LambdaLiftCell False
 decodeCell 7  = LambdaLiftCell True

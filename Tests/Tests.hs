@@ -49,6 +49,23 @@ main = defaultMain [
 -------------------------------------------------------------------------------------
 ----                            BoilerPlate                                     -----
 -------------------------------------------------------------------------------------
+instance Arbitrary Cell where
+    arbitrary = do 
+        i <- choose (0, 8 :: Int)
+        case i of
+            0 -> return RobotCell       
+            1 -> return WallCell        
+            2 -> RockCell          <$> arbitrary
+            3 -> return LambdaCell      
+            4 -> LambdaLiftCell    <$> arbitrary       
+            5 -> return EarthCell       
+            6 -> return EmptyCell
+            7 -> TrampolineCell    <$> choose (0, 9)
+            8 -> TargetCell        <$> choose (0, 9)
+            
+            
+            
+
 instance (Arbitrary a, Ord a, Arbitrary b) => Arbitrary (M.Map a b) where
     arbitrary = M.fromList <$> arbitrary
 
@@ -73,7 +90,7 @@ $(do
                      ''Direction     ,
                      ''Circumstance    ]
 
-        customArbs = []
+        customArbs = [''Cell]
 
     decs <- derives [makeArbitrary] $ 
                 filter (\x -> not $ any (x==) customArbs) dataTypes
