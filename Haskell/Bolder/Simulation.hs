@@ -188,7 +188,7 @@ advanceWater robotAltitude world =
            worldFloodingTicks =
              (worldFloodingTicks world + 1) * (1 - floodValue),
            worldDrowningTicks =
-             if robotAltitude <= worldFloodingLevel world
+             if robotAltitude < worldFloodingLevel world
                then 1 + worldDrowningTicks world
                else 0
          }
