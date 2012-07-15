@@ -109,13 +109,13 @@ advanceWorld action = do
 
   if action == AbortAction
      then return $ Abort world
-     else if robotDrowned world
-          then return $ LossDrowned world
-          else if robotCrushed
-               then return $ LossCrushed world
-               else if (worldRobotPosition world) == (worldLiftPosition world)
-                    then return $ Win world
-                    else return $ Step world
+     else if (worldRobotPosition world) == (worldLiftPosition world)
+            then return $ Win world
+            else if robotDrowned world
+                  then return $ LossDrowned world
+                  else if robotCrushed
+                         then return $ LossCrushed world
+                         else return $ Step world
 
 
 advanceRobot :: Action -> World -> World
