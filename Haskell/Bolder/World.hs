@@ -337,7 +337,7 @@ floodWorld pred world start =
                case worldCell world loc of
                  Just cell -> do
                    beenHere <- lift $ readArray traversed loc
-                   if beenHere || (not $ cellEnterable cell)
+                   if beenHere || (not (cellEnterable cell) && (cell /= RobotCell))
                    then return ()
                    else do
                      when (pred loc cell) $
@@ -346,7 +346,6 @@ floodWorld pred world start =
                      forM_ [Left, Right, Up, Down]
                         (\dir -> helper (dir:path) $ applyMovement dir loc)
                  _ -> return ()
-
        helper [] start
        return ()
 
