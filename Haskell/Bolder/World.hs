@@ -10,7 +10,8 @@ module Bolder.World
      isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, worldRazorsL,
      Word8Image,
      encodeCell, decodeCell,
-     floodWorld)
+     allNeighborPaths, allNearbyPaths,
+     floodWorld, exits)
     where
 
 import Prelude hiding (Either(..))
@@ -316,6 +317,7 @@ cellEnterable EarthCell               = True
 cellEnterable RazorCell               = True
 cellEnterable (TrampolineCell _)      = True
 cellEnterable (LambdaLiftCell True)   = True
+cellEnterable RobotCell               = True
 cellEnterable cell | cellIsEmpty cell = True
                    | otherwise        = False
 
@@ -342,7 +344,7 @@ floodWorld pred world start =
                case worldCell world loc of
                  Just cell -> do
                    beenHere <- lift $ readArray traversed loc
-                   if beenHere || (not (cellEnterable cell) && (cell /= RobotCell))
+                   if beenHere || (not $ cellEnterable cell)
                    then return ()
                    else do
                      when (pred loc cell) $
@@ -353,6 +355,19 @@ floodWorld pred world start =
                  _ -> return ()
        helper [] start
        return ()
+
+
+allNeighborPaths :: [[Direction]]
+allNeighborPaths = [[Up], [Down], [Left], [Right]]
+
+allNearbyPaths = allNeighborPaths ++ [[Up,   Left], [Up,   Right],
+                                      [Down, Left], [Down, Right]]
+
+
+exits :: World -> Location -> [Direction]
+exits world location =
+    filter (\path -> maybe False cellEnterable $ worldCell world $ applyMovement path location)
+           (map head allNeighborPaths)
 
 
 ------------------------------------------------------------------------------------------

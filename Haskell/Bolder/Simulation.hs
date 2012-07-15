@@ -9,7 +9,7 @@ module Bolder.Simulation (
     isLiftOpen,
     worldPushable,
     points,
-    allNeighborPaths,
+    safeSpot,
     Circumstance(..)) where
 
 import Prelude hiding (Either(..))
@@ -215,23 +215,36 @@ advanceCell world liftOpen action index =
       else if cellIsEmpty cell
            then if adjacentBeardGrows index world
                 then BeardCell
-                else fromMaybe cell
-                         $ foldl' (\soFar path ->
-                                       mplus soFar $
-                                             case worldNearbyCell world index path of
-                                               Just cellAbove
-                                                   | cellFalls cellAbove
-                                                   , fallPossible world (Just path)
-                                                     (applyMovement path index) ->
-                                                         Just $ cellAfterFalling cellAbove
-                                               _ -> Nothing)
-                         Nothing [[Up], [Up, Left], [Up, Right]]
+                else fromMaybe cell $ fallsInto world index
            else case cell of
                   LambdaLiftCell False | liftOpen -> LambdaLiftCell True
                   BeardCell | action == ShaveAction
                             , adjacentTo world index RobotCell
                             , worldRazors world > 0 -> EmptyCell
                   _ -> cell)
+
+fallsInto :: World -> Location -> Maybe Cell
+fallsInto world index =
+    foldl' (\soFar path ->
+                mplus soFar $
+                      case worldNearbyCell world index path of
+                        Just cellAbove
+                            | cellFalls cellAbove
+                            , fallPossible world (Just path)
+                                               (applyMovement path index) ->
+                                                   Just $ cellAfterFalling cellAbove
+                        _ -> Nothing)
+    Nothing [[Up], [Up, Left], [Up, Right]]
+
+safeSpot :: World -> Location -> Bool
+safeSpot world index =
+    foldl' (\soFar path ->
+                soFar &&
+                      case worldNearbyCell world index path of
+                        Just cellAbove
+                            | cellFalls cellAbove -> False
+                        _ -> True)
+    True [[Up], [Up, Left], [Up, Right]]
 
 adjacentBeardGrows :: Location -> World -> Bool
 adjacentBeardGrows location world =
@@ -240,12 +253,6 @@ adjacentBeardGrows location world =
 adjacentTo :: World -> Location -> Cell -> Bool
 adjacentTo world location cell =
     any (== cell) (map ((fromMaybe WallCell) . worldNearbyCell world location) allNearbyPaths)
-
-allNeighborPaths :: [[Direction]]
-allNeighborPaths = [[Up], [Down], [Left], [Right]]
-
-allNearbyPaths = allNeighborPaths ++ [[Up,   Left], [Up,   Right],
-                                      [Down, Left], [Down, Right]]
 
 fallPossible :: World -> Maybe [Direction] -> Location -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of
