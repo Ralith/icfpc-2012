@@ -89,7 +89,9 @@ nextRoute world = do
 
 nextRoute' :: World -> Maybe Route
 nextRoute' world =
-  runST $ floodWorld (\location cell -> cell == LambdaCell)
+  runST $ floodWorld (\location cell ->
+                          cell == LambdaCell &&
+                          (maybe True (not . cellFalls) $ worldNearbyCell world location Up))
                      world
                      (worldRobotPosition world)
         $$ C.consume
