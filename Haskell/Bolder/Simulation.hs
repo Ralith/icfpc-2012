@@ -189,7 +189,8 @@ advanceCell world liftOpen index =
 fallPossible :: World -> Maybe [Direction] -> Location -> Bool
 fallPossible world path index = case worldNearbyCell world index Down of
     Just LambdaCell
-        | Just EmptyCell <- worldNearbyCell world index Right
+        | not (isJust path) || path == Just [Up,Left]
+        , Just EmptyCell <- worldNearbyCell world index Right
         , Just EmptyCell <- worldNearbyCell world index [Down,Right]
         -> True
 
