@@ -15,7 +15,10 @@ module Bolder.World
 import Prelude hiding (Either(..))
 
 import Control.Monad
+import Control.Monad.ST
+import Control.Monad.Trans
 import Data.Array.Unboxed
+import Data.Array.ST
 import Data.Word
 import Data.Maybe
 import Data.Tuple
@@ -24,6 +27,7 @@ import qualified Data.Map as Map
 import Data.List
 --import Data.DeriveTH
 import Data.Lens.Common
+import Data.Conduit
 
 type Location = (Int, Int)
 
@@ -100,7 +104,7 @@ data Direction
 
 
 class Movement movement where
-  applyMovement :: movement -> (Int, Int) -> (Int, Int)
+  applyMovement :: movement -> Location -> Location
 
 
 instance Movement Direction where
@@ -158,7 +162,7 @@ decodeCell c
     | otherwise = error $ "decodeCell " ++ show c ++ " is not a valid option"
 
 
-worldSize :: World -> Location
+worldSize :: World -> (Int, Int)
 worldSize world =
   let (_, size) = bounds $ worldData world
   in size
@@ -323,6 +327,30 @@ cellPushable _ = False
 cellIsEmpty :: Cell -> Bool
 cellIsEmpty EmptyCell = True
 cellIsEmpty _         = False
+
+
+-- floodWorld :: (Location -> Cell -> Bool) -> World -> Location -> Source (ST s) [Direction]
+-- floodWorld pred world start =
+--     do traversed <- lift (newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool))
+--        let helper path loc cell = do
+--              when (pred loc cell) $
+--                   yield (reverse path)
+--              lift $ writeArray traversed loc True
+--              opts <- lift $ candidates loc
+--              forM_ opts
+--                    (\(dir, newLoc, cell) -> helper (dir:path) newLoc cell)
+--              return ()
+
+--            candidates :: Location -> ST s [(Direction, Location, Cell)]
+--            candidates loc = filterM (\(_, newLoc, _) -> readArray traversed newLoc) $
+--                             mapMaybe (\d -> do
+--                                         let newLoc = applyMovement d loc
+--                                         cell <- worldCell world newLoc
+--                                         Just (d, newLoc, cell))
+--                             [Left, Right, Up, Down]
+--        helper [] start $ fromMaybe WallCell $ worldCell world start
+--        return ()
+
 
 
 ------------------------------------------------------------------------------------------
