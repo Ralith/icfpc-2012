@@ -40,13 +40,18 @@ visualize world debugInformation = do
         [height, height - 1 .. 1]
   putStr "\x1B[m"
   let informationStartColumn = width + 2
+      lambdas = worldLambdasCollected world
+      ticks = worldTicks world
   mapM_ (\(lineIndex, line) -> do
             putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
                      ++ (show informationStartColumn) ++ "f"
                      ++ (T.unpack line))
         (zip [2 ..]
-             ((T.pack $ (show $ worldTicks world) ++ " ticks")
-              : (T.pack $ (show $ worldLambdasCollected world) ++ " lambdas")
+             (  (T.pack $ (show ticks) ++ " ticks")
+              : (T.pack $ (show lambdas) ++ " lambdas")
+              : (T.pack $ (show $ lambdas * 25 - ticks) ++ " points")
+              : (T.pack $ "  " ++ (show $ lambdas * 50 - ticks) ++ " on abort")
+              : (T.pack $ "  " ++ (show $ lambdas * 75 - ticks) ++ " on win")
               : (T.pack $ (show $ worldDrowningTicks world)
                       ++ "/" ++ (show $ worldDrowningDuration world)
                              ++ " drowned")
