@@ -18,7 +18,6 @@ import Control.Monad.State
 import Bolder.Simulation
 import Bolder.World
 
-import Debug.Trace
 
 data Problem
   = RockInTheWayProblem Location
@@ -94,13 +93,20 @@ nextRoute' world =
                      world
                      (worldRobotPosition world)
         $$ C.consume
-           >>= return . listToMaybe
            >>= return
                . fmap (\directions ->
                          Route {
                              routeActions = map MoveAction directions,
                              routeProblems = []
                            })
+               . foldl' (\maybeBest candidate ->
+                           case maybeBest of
+                             Nothing -> Just candidate
+                             Just best ->
+                               if length candidate < length best
+                                 then Just candidate
+                                 else maybeBest)
+                        Nothing
 
 {-
   fmap (\(route, _, _) -> route)
