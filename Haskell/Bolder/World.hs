@@ -337,7 +337,7 @@ floodWorld pred world start =
                case worldCell world loc of
                  Just cell -> do
                    beenHere <- lift $ readArray traversed loc
-                   if beenHere
+                   if beenHere || (not $ cellEnterable cell)
                    then return ()
                    else do
                      when (pred loc cell) $
