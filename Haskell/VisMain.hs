@@ -74,6 +74,7 @@ extractAction = helper ""
               in case chr $ fromEnum $ B.head block of
                    'w' -> yield WaitAction >> helper (B.tail block)
                    'a' -> yield AbortAction >> helper (B.tail block)
+                   's' -> yield ShaveAction >> helper (B.tail block)
                    'i' -> yield (MoveAction Up) >> helper (B.tail block)
                    'j' -> yield (MoveAction Left) >> helper (B.tail block)
                    'k' -> yield (MoveAction Down) >> helper (B.tail block)

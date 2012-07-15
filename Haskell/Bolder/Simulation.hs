@@ -82,6 +82,7 @@ advanceWorld action = do
   robotPosition        <- gets worldRobotPosition
   beardState           <- gets worldBeardState
   beardRate            <- gets worldBeardRate
+  razors               <- gets worldRazors
   modify (advanceRobot action)
   
   liftOpen             <- gets $ flip isLiftOpen  allIndices
@@ -89,13 +90,16 @@ advanceWorld action = do
   --save the old world
   oldWorld <- get
   let newWorldData = makeWorldData size $ 
-                        map (advanceCell oldWorld liftOpen) allIndices
+                        map (advanceCell oldWorld liftOpen action) allIndices
   --update the world data
   modify $ setL worldDataL newWorldData
   incTicks
   if beardState == 0
   then modify $ worldBeardStateL ^= beardRate - 1
   else modify $ worldBeardStateL ^-= 1
+
+  when (action == ShaveAction && razors > 0)
+       (modify $ worldRazorsL ^-= 1)
         
   modify $ advanceWater (snd robotPosition)
           
@@ -175,8 +179,8 @@ advanceWater robotAltitude world =
          }
 
 
-advanceCell :: World -> Bool -> Location -> (Location, Cell)
-advanceCell world liftOpen index =
+advanceCell :: World -> Bool -> Action -> Location -> (Location, Cell)
+advanceCell world liftOpen action index =
   (index,
    let cell = fromMaybe EmptyCell $ worldCell world index
    in if cellFalls cell
@@ -195,14 +199,20 @@ advanceCell world liftOpen index =
                                                          Just $ cellAfterFalling cellAbove
                                                _ -> Nothing)
                          Nothing [[Up], [Up, Left], [Up, Right]]
-           else if (cell == LambdaLiftCell False) && liftOpen
-                  then LambdaLiftCell True
-                  else cell)
+           else case cell of
+                  LambdaLiftCell False | liftOpen -> LambdaLiftCell True
+                  BeardCell | action == ShaveAction
+                            , adjacentTo world index RobotCell
+                            , worldRazors world > 0 -> EmptyCell
+                  _ -> cell)
 
 adjacentBeardGrows :: Location -> World -> Bool
 adjacentBeardGrows location world =
-    worldBeardState world == 0
-    && any (== BeardCell) (map ((fromMaybe WallCell) . worldNearbyCell world location) allNearbyPaths)
+    worldBeardState world == 0 && adjacentTo world location BeardCell
+
+adjacentTo :: World -> Location -> Cell -> Bool
+adjacentTo world location cell =
+    any (== cell) (map ((fromMaybe WallCell) . worldNearbyCell world location) allNearbyPaths)
 
 allNeighborPaths :: [[Direction]]
 allNeighborPaths = [[Up], [Down], [Left], [Right]]

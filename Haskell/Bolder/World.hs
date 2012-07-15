@@ -7,7 +7,8 @@ module Bolder.World
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
      cellEnterable, cellPushable, cellIsEmpty,
-     isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, Word8Image,
+     isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, worldRazorsL,
+     Word8Image,
      encodeCell, decodeCell)
     where
 
@@ -58,6 +59,9 @@ worldDataL = lens worldData (\x w -> w {worldData = x})
 worldBeardStateL :: Lens World Int
 worldBeardStateL = lens worldBeardState (\x w -> w {worldBeardState = x})
 
+worldRazorsL :: Lens World Int
+worldRazorsL = lens worldRazors (\x w -> w {worldRazors = x})
+
 
 data Cell
   = RobotCell
@@ -81,6 +85,7 @@ isLambdaCell _          = False
 
 data Action
   = MoveAction Direction
+  | ShaveAction
   | WaitAction
   | AbortAction
   deriving (Eq, Ord, Show)
