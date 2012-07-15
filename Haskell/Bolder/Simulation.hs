@@ -43,9 +43,9 @@ isLiftOpen :: World -> [Location] -> Bool
 isLiftOpen world = all (maybe True (not . isLambdaCell) . worldCell world)
 
 
-getCircumstances ::  [Location] -> World -> Context (Map.Map Location Circumstance)             
+getCircumstances ::  [Location] -> World -> (Map.Map Location Circumstance)             
 getCircumstances indices world = 
-    return $ Map.fromList $ mapMaybe (\index ->
+     Map.fromList $ mapMaybe (\index ->
                     let isEmpty path =
                           maybe False cellIsEmpty
                                 $ worldNearbyCell world index path
