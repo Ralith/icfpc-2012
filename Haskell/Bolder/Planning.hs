@@ -4,6 +4,7 @@ import Prelude hiding (Either(..))
 
 import Control.Monad
 import Control.Monad.ST
+import Control.Monad.Identity
 import Data.Conduit
 import qualified Data.Conduit.Binary as C hiding (lines)
 import qualified Data.Conduit.Text as C
@@ -89,26 +90,23 @@ nextRoute world = do
 
 nextRoute' :: World -> Maybe Route
 nextRoute' world =
-  runST $ floodWorld (\location cell ->
-                           (cell == LambdaCell || cell == LambdaLiftCell True)
-                           && safeSpot world location)
-                     world
-                     (worldRobotPosition world)
-        $$ C.consume
-           >>= return
-               . fmap (\directions ->
-                         Route {
-                             routeActions = map MoveAction directions,
-                             routeProblems = []
-                           })
-               . foldl' (\maybeBest candidate ->
-                           case maybeBest of
-                             Nothing -> Just candidate
-                             Just best ->
-                               if length candidate < length best
-                                 then Just candidate
-                                 else maybeBest)
-                        Nothing
+  runIdentity $ goalPaths world
+              $$ C.consume
+                 >>= return
+                     . fmap (\directions ->
+                               Route {
+                                   routeActions = map MoveAction directions,
+                                   routeProblems = []
+                                 })
+                     . foldl' (\maybeBest candidate ->
+                                 case maybeBest of
+                                   Nothing -> Just candidate
+                                   Just best ->
+                                     if length candidate < length best
+                                       then Just candidate
+                                       else maybeBest)
+                              Nothing
+
 
 goals :: World -> [Location]
 goals w =
