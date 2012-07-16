@@ -405,14 +405,14 @@ findPath safepred world start dest = runST $ do
              Nothing -> return Nothing
              Just (current :-> _) ->
                  if current == dest
-                 then return $ Just $ reconstructPath current
+                 then return $ Just $ reconstructPath current []
                  else return Nothing
-      reconstructPath point = do
+      reconstructPath point accum = do
         dir <- readArray cameFrom point
         if dir == 0
-        then return []
+        then return accum
         else let dir' = decodeDir dir
-             in (reconstructPath $ applyMovement dir' point) >>= return . ((oppositeDirection dir') :)
+             in reconstructPath (applyMovement dir' point) (oppositeDirection dir'):accum
   helper $ Q.singleton start 0
 
 
