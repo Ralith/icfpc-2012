@@ -52,7 +52,7 @@ main = do
                                world
       exitSuccess
     _ -> do
-      putStrLn $ "Usage: bolder input.map"
+      putStrLn $ "Usage: bolder-vis input.map"
       exitFailure
 
 
