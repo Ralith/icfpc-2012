@@ -395,11 +395,11 @@ exits world location =
            (map head allNeighborPaths)
 
 
-findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
+findPath :: (Location -> Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
 findPath safepred world start dest =
   runST $ findPath' safepred world start dest
 
-findPath' :: forall s . (Location -> Bool) -> World -> Location -> Location -> ST s (Maybe [Direction])
+findPath' :: forall s . (Location -> Location -> Bool) -> World -> Location -> Location -> ST s (Maybe [Direction])
 findPath' safepred world start dest = do
   cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
@@ -413,7 +413,7 @@ findPath' safepred world start dest = do
                  else do
                    writeArray closed current True
                    neighbors <- filterM (fmap not . readArray closed . fst)
-                                $ filter (\(l, _) -> safepred l)
+                                $ filter (\(l, _) -> safepred current l)
                                 $ (map (\d -> (applyMovement d current, d))
                                   $ exits world current)
                    foldM (\open' (n, d) ->

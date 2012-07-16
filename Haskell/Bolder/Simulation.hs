@@ -9,7 +9,7 @@ module Bolder.Simulation (
     isLiftOpen,
     worldPushable,
     points,
-    safeSpot,
+    safeMove,
     Circumstance(..)) where
 
 import Prelude hiding (Either(..))
@@ -237,15 +237,15 @@ fallsInto world index =
                         _ -> Nothing)
     Nothing [[Up], [Up, Left], [Up, Right]]
 
-safeSpot :: World -> Location -> Bool
-safeSpot world index =
+safeMove :: World -> Location -> Location -> Bool
+safeMove world prev next =
     foldl' (\soFar path ->
                 soFar &&
-                      case worldNearbyCell world index path of
+                      case worldNearbyCell world next path of
                         Just cellAbove
                             | cellFalls cellAbove
                             , fallPossible world (Just path)
-                                               (applyMovement path index)
+                                               (applyMovement path next)
                                                True -> False
                         _ -> True)
     True [[Up], [Up, Left], [Up, Right]]

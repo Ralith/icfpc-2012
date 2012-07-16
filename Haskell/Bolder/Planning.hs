@@ -112,13 +112,12 @@ goals :: World -> Location -> [Location]
 goals w origin =
     --sortBy (\a b -> compare (distance origin a) (distance origin b)) $
     filter (\loc -> let cell = worldCell w loc
-                    in (cell == Just LambdaCell || cell == Just (LambdaLiftCell True)
-                       && safeSpot w loc))
+                    in cell == Just LambdaCell || cell == Just (LambdaLiftCell True))
            $ worldIndices w
 
 goalPaths :: Monad m => World -> Source m [Direction]
 goalPaths w = (C.sourceList $ goals w (worldRobotPosition w))
-           $= C.mapMaybe (findPath (safeSpot w) w (worldRobotPosition w))
+           $= C.mapMaybe (findPath (safeMove w) w (worldRobotPosition w))
 
 {-
   fmap (\(route, _, _) -> route)
