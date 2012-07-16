@@ -42,8 +42,8 @@ data StepResult
 type Context = State World
 
 
-isLiftOpen :: World -> [Location] -> Bool
-isLiftOpen world = all (maybe True (not . isLambdaCell) . worldCell world)
+isLiftOpen :: World -> Bool
+isLiftOpen world = worldLambdasCollected world >= worldLambdasRequired world
 
 
 getCircumstances ::  [Location] -> World -> (Map.Map Location Circumstance)             
@@ -86,7 +86,7 @@ advanceWorld action = do
   modify (advanceRobot action)
   modify advanceDrowning
   
-  liftOpen             <- gets $ flip isLiftOpen  allIndices
+  liftOpen             <- gets $ isLiftOpen
   circumstances        <- gets $ getCircumstances allIndices
   --save the old world
   oldWorld <- get
@@ -271,6 +271,12 @@ fallPossible world path index = case worldNearbyCell world index Down of
         -> False
         | not (isJust path) || path == Just [Up,Left], rockMovesRight -> True
         | not (isJust path) || path == Just [Up,Right], rockMovesLeft -> True
+    
+    Just HigherOrderRockCell{}
+        | Just [Up,Right] <- path, rockMovesLeft, rockMovesRight
+        -> False
+        | not (isJust path) || path == Just [Up,Left], rockMovesRight -> True
+        | not (isJust path) || path == Just [Up,Right], rockMovesLeft -> True
 
     _otherwise      -> False
 
@@ -294,11 +300,14 @@ advanceFallCell world cell index =
 
 cellAtRest :: Cell -> Cell
 cellAtRest (RockCell _) = RockCell False
+cellAtRest (HigherOrderRockCell False) = HigherOrderRockCell False
+cellAtRest (HigherOrderRockCell True) = LambdaCell
 cellAtRest cell = cell
 
 
 cellAfterFalling :: Cell -> Cell
 cellAfterFalling (RockCell _) = RockCell True
+cellAfterFalling (HigherOrderRockCell _) = HigherOrderRockCell True
 cellAfterFalling cell = cell
 
 

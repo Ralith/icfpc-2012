@@ -47,6 +47,7 @@ data World =
       worldDrowningDuration :: Int,
       worldDrowningTicks :: Int,
       worldLambdasCollected :: Int,
+      worldLambdasRequired :: Int,
       worldTrampolines :: Map.Map Int Location,
       worldTargets :: Map.Map Int [Location],
       worldRobotPosition :: Location,
@@ -83,6 +84,7 @@ data Cell
   | TargetCell Int
   | BeardCell
   | RazorCell
+  | HigherOrderRockCell Bool
   deriving (Eq, Ord, Show)
 
 
@@ -132,33 +134,37 @@ oppositeDirection Down = Up
 
 
 encodeCell :: Cell -> Word8
-encodeCell  RobotCell             = 1
-encodeCell  WallCell              = 2
-encodeCell (RockCell False)       = 3
-encodeCell (RockCell True)        = 4
-encodeCell  LambdaCell            = 5
-encodeCell (LambdaLiftCell False) = 6
-encodeCell (LambdaLiftCell True)  = 7
-encodeCell  EarthCell             = 8
-encodeCell  EmptyCell             = 9
-encodeCell (TrampolineCell index) = 10 + (toEnum index)
-encodeCell (TargetCell index)     = 20 + (toEnum index)
-encodeCell  BeardCell             = 31
-encodeCell  RazorCell             = 32
+encodeCell  RobotCell                  = 1
+encodeCell  WallCell                   = 2
+encodeCell (RockCell False)            = 3
+encodeCell (RockCell True)             = 4
+encodeCell  LambdaCell                 = 5
+encodeCell (LambdaLiftCell False)      = 6
+encodeCell (LambdaLiftCell True)       = 7
+encodeCell  EarthCell                  = 8
+encodeCell  EmptyCell                  = 9
+encodeCell (TrampolineCell index)      = 10 + (toEnum index)
+encodeCell (TargetCell index)          = 20 + (toEnum index)
+encodeCell  BeardCell                  = 31
+encodeCell  RazorCell                  = 32
+encodeCell (HigherOrderRockCell False) = 33
+encodeCell (HigherOrderRockCell True)  = 34
 
 
 decodeCell :: Word8 -> Cell
 decodeCell 1  = RobotCell
 decodeCell 2  = WallCell
-decodeCell 3  = RockCell       False
-decodeCell 4  = RockCell       True
+decodeCell 3  = RockCell            False
+decodeCell 4  = RockCell            True
 decodeCell 5  = LambdaCell
-decodeCell 6  = LambdaLiftCell False
-decodeCell 7  = LambdaLiftCell True
+decodeCell 6  = LambdaLiftCell      False
+decodeCell 7  = LambdaLiftCell      True
 decodeCell 8  = EarthCell
 decodeCell 9  = EmptyCell
 decodeCell 31 = BeardCell
 decodeCell 32 = RazorCell
+decodeCell 33 = HigherOrderRockCell False
+decodeCell 34 = HigherOrderRockCell True
 decodeCell c
     | c >= 10
     , c <  20   = TrampolineCell $ (fromEnum c) - 10
@@ -245,6 +251,13 @@ parseWorld text  =
                             [1..])
                  bodyLines
                  [0..]
+      lambdasRequired =
+        foldl' (\total (_, cell) ->
+                  if cellContainsLambda cell
+                    then total + 1
+                    else total)
+               0
+               associations
       (trampolines, targets) =
           foldl' (\prev@(trampmap, targmap) link -> fromMaybe prev $
                   do let [tramp, targ] = map (flip T.index 0) $ T.splitOn " targets " link
@@ -268,6 +281,7 @@ parseWorld text  =
                  maybe 10 (read . T.unpack. (!! 0)) $ Map.lookup "Waterproof" keys,
              worldDrowningTicks = 0,
              worldLambdasCollected = 0,
+             worldLambdasRequired = lambdasRequired,
              worldTrampolines = trampolines,
              worldTargets = targets,
              worldRobotPosition = fromMaybe (1,1) $ fmap fst
@@ -308,6 +322,7 @@ readCell '.'  = EarthCell
 readCell 'W'  = BeardCell
 readCell '!'  = RazorCell
 readCell ' '  = EmptyCell
+readCell '@'  = HigherOrderRockCell False
 readCell c = fromMaybe WallCell
              $       (findIndex (== c) ['A'..'I'] >>= return . TrampolineCell)
              `mplus` (findIndex (== c) ['1'..'9'] >>= return . TargetCell)
@@ -326,6 +341,7 @@ cellEnterable cell | cellIsEmpty cell = True
 
 cellPushable :: Cell -> Bool
 cellPushable (RockCell _) = True
+cellPushable (HigherOrderRockCell _) = True
 cellPushable _ = False
 
 
@@ -336,7 +352,14 @@ cellIsEmpty _         = False
 
 cellFalls :: Cell -> Bool
 cellFalls (RockCell _) = True
+cellFalls (HigherOrderRockCell _) = True
 cellFalls _ = False
+
+
+cellContainsLambda :: Cell -> Bool
+cellContainsLambda LambdaCell = True
+cellContainsLambda (HigherOrderRockCell _) = True
+cellContainsLambda _ = False
 
 
 floodWorld :: (Location -> Cell -> Bool) -> World -> Location -> Source (ST s) [Direction]

@@ -43,6 +43,8 @@ visualize result = do
                                            ++ [['1'..'9'] !! id] --[['①'..'⑨'] !! id]
                           BeardCell -> "\x1B[22;" ++ background ++ ";37m⊎"
                           RazorCell -> "\x1B[22;" ++ background ++ ";37m𐌕"
+                          HigherOrderRockCell _ ->
+                            "\x1B[22;" ++ background ++ ";33m●"
                           -- _ -> "\x1B[22;1;41;30m?"
                     )
                  [1 .. width]
@@ -51,6 +53,7 @@ visualize result = do
   putStr "\x1B[m"
   let informationStartColumn = width + 2
       lambdas = worldLambdasCollected world
+      lambdasRemaining = worldLambdasRequired world - lambdas
       ticks = worldTicks world
   mapM_ (\(lineIndex, line) -> do
             putStr $ "\x1B[" ++ (show $ lineIndex) ++ ";"
@@ -58,6 +61,7 @@ visualize result = do
                      ++ (T.unpack line))
         (zip [2 ..]
              (  (T.pack $ (show ticks) ++ " ticks")
+              : (T.pack $ (show $ lambdasRemaining) ++ " lambdas remaining")
               : (T.pack $ (show $ points result)  ++ " points")
               : (T.pack $ (show $ worldDrowningTicks world)
                       ++ "/" ++ (show $ worldDrowningDuration world)
