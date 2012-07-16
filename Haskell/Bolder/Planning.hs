@@ -112,8 +112,9 @@ nextRoute' world =
 
 goals :: World -> [Location]
 goals w =
-    filter (\loc -> worldCell w loc == (Just LambdaCell) &&
-                    safeSpot w loc)
+    filter (\loc -> let cell = worldCell w loc
+                    in (cell == Just LambdaCell || cell == Just (LambdaLiftCell True))
+                       && safeSpot w loc)
            $ worldIndices w
 
 goalPaths :: Monad m => World -> Source m [Direction]
