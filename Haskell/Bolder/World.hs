@@ -32,6 +32,7 @@ import Data.Lens.Common
 import Data.Conduit
 import Data.PSQueue (PSQ, Binding(..))
 import qualified Data.PSQueue as Q
+import Debug.Trace
 
 type Location = (Int, Int)
 
@@ -405,7 +406,7 @@ findPath' safepred world start dest = do
   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
   let helper :: PSQ (Location, Int) Float -> ST s (Maybe [Direction])
       helper open =
-           case Q.findMin open of
+           case Q.findMin (traceShow open open) of
              Nothing -> return Nothing
              Just ((current, gscore) :-> fscore) ->
                  if current == dest
@@ -415,9 +416,8 @@ findPath' safepred world start dest = do
                    neighbors <- filterM (fmap not . readArray closed . fst)
                                 $ (map (\d -> (applyMovement d current, d))
                                   $ exits world current)
-                   return (neighbors :: [(Location, Direction)])
                    foldM (\open' (n, d) ->
-                              if isJust $ Q.lookup (n, gscore+1) open
+                              if not $ isJust $ Q.lookup (n, gscore+1) open
                               then do
                                 writeArray cameFrom n (encodeDir d)
                                 return $ Q.insert (n, gscore+1) ((fromIntegral gscore+1)
@@ -425,15 +425,15 @@ findPath' safepred world start dest = do
                                                   open'
                               else return open')
                          (Q.delete (current, gscore) open)
-                         neighbors
+                         (traceShow neighbors neighbors)
                          >>= helper
       reconstructPath :: Location -> [Direction] -> ST s [Direction]
       reconstructPath point accum = do
         dir <- readArray cameFrom point
         if dir == 0
-        then return accum
+        then getAssocs cameFrom >>= (flip traceShow $ return accum)
         else let dir' = decodeDir dir
-             in reconstructPath (applyMovement dir' point) (oppositeDirection dir' : accum)
+             in reconstructPath (applyMovement (oppositeDirection dir') point) (dir' : accum)
   helper $ Q.singleton (start, 0) $ distance start dest
 
 
