@@ -31,7 +31,8 @@ import Data.List
 import Data.Lens.Common
 import Data.Conduit
 import Data.Graph.AStar
-import qualified Data.Set as S
+import Data.PSQueue (PSQ, Binding(..))
+import qualified Data.PSQueue as Q
 
 type Location = (Int, Int)
 
@@ -395,16 +396,37 @@ exits world location =
            (map head allNeighborPaths)
 
 
-findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
-findPath safepred world start dest = fmap (map snd) $
-    aStar (\(v, _) -> S.fromList $
-                      filter (\(v, _) -> safepred v) $
-                      map (\d -> (applyMovement d v, d))
-                              (exits world v))
-          (\_ _ -> 1)
-          (\(v, _) -> distance start v)
-          (\(v, _) -> v == dest)
-          (start, Down) -- Direction component of start is ignored
+-- findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
+-- findPath safepred world start dest = runST $ do
+--   cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
+--   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
+--   let helper :: PSQ Location Int -> ST s (Maybe [Direction])
+--       helper open =
+--            case Q.findMin open of
+--              Nothing -> return Nothing
+--              Just (current :-> _) ->
+--                  if current == dest
+--                  then return $ Just $ reconstructPath current
+--                  else return Nothing
+--       reconstructPath point = do
+--         dir <- readArray cameFrom point
+--         if dir == 0
+--         then return []
+--         else let dir' = decodeDir dir
+--              in (reconstructPath $ applyMovement dir' point) >>= return . ((oppositeDirection dir') :)
+--   helper $ Q.singleton start 0
+
+
+encodeDir Up = 1
+encodeDir Down = 2
+encodeDir Left = 3
+encodeDir Right = 4
+
+decodeDir 1 = Up
+decodeDir 2 = Down
+decodeDir 3 = Left
+decodeDir 4 = Right
+
 
 distance :: (Floating a, Integral a1) => (a1, a1) -> (a1, a1) -> a
 distance l1 l2 = sqrt $ fromIntegral $ ((fst l2 - fst l1)^2 + (snd l2 - snd l1)^2)
