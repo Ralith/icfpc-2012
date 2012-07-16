@@ -36,7 +36,12 @@ data Route =
 planner :: (Monad m) => World -> Source m Action
 planner world = do
   fromMaybe (yield AbortAction) $ do
-    route <- nextRoute world
+    route <-        (nextRoute (goals (== LambdaCell) world) world)
+            `mplus` (nextRoute (goals (\c -> case c of
+                                                TrampolineCell _ -> True
+                                                _ -> False)
+                                      world)
+                                world)
     return $ do
       (maybeWorld, _) <-
         foldM (\maybeWorldAndFlag action -> do
@@ -59,15 +64,14 @@ planner world = do
 
 
 sufficientlySimilar :: World -> World -> Bool
-sufficientlySimilar oldWorld newWorld = True
+sufficientlySimilar oldWorld newWorld = False
 
 
-nextRoute :: World -> Maybe Route
+{-
 nextRoute world = do
-  route <- nextRoute' world
+  route <- nextRoute' c world
   case routeProblems route of
     [] -> Just route
-{-
     (problem : rest) -> do
       -- candidateResolutions <- resolveProblem world problem
       world <- foldM (\world action -> do
@@ -92,13 +96,13 @@ nextRoute world = do
         Just robotPosition -> do
           next <- nextRoute world
           Just $ concatRoutes [resolution, next]
--}
     _ -> Nothing
+-}
 
 
-nextRoute' :: World -> Maybe Route
-nextRoute' world =
-  runIdentity $ goalPaths world
+nextRoute :: [Location] -> World -> Maybe Route
+nextRoute candidates world =
+  runIdentity $ paths candidates world
               $$ C.consume
                  >>= return
                      . fmap (\directions ->
@@ -116,16 +120,17 @@ nextRoute' world =
                               Nothing
 
 
-goals :: World -> Location -> [Location]
-goals w origin =
+goals :: (Cell -> Bool) -> World -> [Location]
+goals pred w =
     --sortBy (\a b -> compare (distance origin a) (distance origin b)) $
     filter (\loc -> let cell = worldCell w loc
-                    in cell == Just LambdaCell || cell == Just (LambdaLiftCell True))
+                    in maybe False pred cell || cell == Just (LambdaLiftCell True))
            $ worldIndices w
 
-goalPaths :: Monad m => World -> Source m [Direction]
-goalPaths w = (C.sourceList $ goals w (worldRobotPosition w))
-           $= C.mapMaybe (findPath (safeMove w) w (worldRobotPosition w))
+paths :: Monad m => [Location] -> World -> Source m [Direction]
+paths candidates w =
+      (C.sourceList candidates)
+    $= C.mapMaybe (findPath (safeMove w) w (worldRobotPosition w))
 
 {-
   fmap (\(route, _, _) -> route)
