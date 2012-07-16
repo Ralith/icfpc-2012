@@ -403,14 +403,30 @@ findPath' :: forall s . (Location -> Bool) -> World -> Location -> Location -> S
 findPath' safepred world start dest = do
   cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
-  let helper :: PSQ Location Int -> ST s (Maybe [Direction])
+  let helper :: PSQ (Location, Int) Float -> ST s (Maybe [Direction])
       helper open =
            case Q.findMin open of
              Nothing -> return Nothing
-             Just (current :-> _) ->
+             Just ((current, gscore) :-> fscore) ->
                  if current == dest
-                 then reconstructPath current [] >>= return . Just
-                 else return Nothing
+                 then fmap Just $ reconstructPath current []
+                 else do
+                   writeArray closed current True
+                   neighbors <- filterM (fmap not . readArray closed . fst)
+                                $ (map (\d -> (applyMovement d current, d))
+                                  $ exits world current)
+                   return (neighbors :: [(Location, Direction)])
+                   foldM (\open' (n, d) ->
+                              if isJust $ Q.lookup (n, gscore+1) open
+                              then do
+                                writeArray cameFrom n (encodeDir d)
+                                return $ Q.insert (n, gscore+1) ((fromIntegral gscore+1)
+                                                                 + distance n dest)
+                                                  open'
+                              else return open')
+                         (Q.delete (current, gscore) open)
+                         neighbors
+                         >>= helper
       reconstructPath :: Location -> [Direction] -> ST s [Direction]
       reconstructPath point accum = do
         dir <- readArray cameFrom point
@@ -418,7 +434,7 @@ findPath' safepred world start dest = do
         then return accum
         else let dir' = decodeDir dir
              in reconstructPath (applyMovement dir' point) (oppositeDirection dir' : accum)
-  helper $ Q.singleton start 0
+  helper $ Q.singleton (start, 0) $ distance start dest
 
 
 encodeDir Up = 1
@@ -432,7 +448,7 @@ decodeDir 3 = Left
 decodeDir 4 = Right
 
 
-distance :: (Floating a, Integral a1) => (a1, a1) -> (a1, a1) -> a
+distance :: (Integral a, Floating b) => (a, a) -> (a, a) -> b
 distance l1 l2 = sqrt $ fromIntegral $ ((fst l2 - fst l1)^2 + (snd l2 - snd l1)^2)
 
 
