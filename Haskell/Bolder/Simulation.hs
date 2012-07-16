@@ -292,7 +292,9 @@ fallPossible world path index hypothesizeEmpty =
     sampleCell index =
         if (Just index == hypothesizeEmpty)
         then Just EmptyCell
-        else worldCell world index
+        else case worldCell world index of
+               Just RobotCell | isJust hypothesizeEmpty -> Just EmptyCell
+               maybeCell -> maybeCell
 
 
 advanceFallCell :: World -> Cell -> Location -> Cell
