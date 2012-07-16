@@ -62,13 +62,9 @@ getCircumstances indices world =
                             indices        
 
 
-isRobotCrushed :: Action -> World -> World -> Bool       
-isRobotCrushed action oldWorld newWorld  =
-    let robotPosition = worldRobotPosition oldWorld
-    in Just (RockCell True) == worldNearbyCell newWorld robotPosition Up
-           || action == MoveAction Down
-           && cellFalls (fromMaybe EmptyCell 
-                         (worldNearbyCell oldWorld robotPosition Up))          
+isRobotCrushed :: World -> World -> Bool
+isRobotCrushed oldWorld newWorld  =
+    isJust $ fallsInto oldWorld $ applyMovement Up (worldRobotPosition newWorld)
 
 incTicks :: Context ()
 incTicks = modify (worldTicksL ^+= 1)
@@ -104,7 +100,7 @@ advanceWorld action = do
         
   modify advanceWater
           
-  robotCrushed <- gets $ isRobotCrushed action oldWorld
+  robotCrushed <- gets $ isRobotCrushed oldWorld
   world        <- get
 
   if action == AbortAction
