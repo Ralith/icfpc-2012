@@ -412,7 +412,7 @@ findPath safepred world start dest = runST $ do
         if dir == 0
         then return accum
         else let dir' = decodeDir dir
-             in reconstructPath (applyMovement dir' point) (oppositeDirection dir'):accum
+             in reconstructPath (applyMovement dir' point) (oppositeDirection dir' : accum)
   helper $ Q.singleton start 0
 
 
