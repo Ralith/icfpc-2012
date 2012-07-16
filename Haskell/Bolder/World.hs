@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables #-}
 module Bolder.World
     (World(..), Cell(..), Action(..), Direction(..), Location,
      oppositeDirection, applyMovement,
@@ -396,7 +396,11 @@ exits world location =
 
 
 findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
-findPath safepred world start dest = runST $ do
+findPath safepred world start dest =
+  runST $ findPath' safepred world start dest
+
+findPath' :: forall s . (Location -> Bool) -> World -> Location -> Location -> ST s (Maybe [Direction])
+findPath' safepred world start dest = do
   cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
   let helper :: PSQ Location Int -> ST s (Maybe [Direction])
@@ -405,14 +409,15 @@ findPath safepred world start dest = runST $ do
              Nothing -> return Nothing
              Just (current :-> _) ->
                  if current == dest
-                 then return $ Just $ reconstructPath current []
+                 then reconstructPath current [] >>= return . Just
                  else return Nothing
+      reconstructPath :: Location -> [Direction] -> ST s [Direction]
       reconstructPath point accum = do
         dir <- readArray cameFrom point
         if dir == 0
         then return accum
         else let dir' = decodeDir dir
-             in reconstructPath (applyMovement dir' point) (oppositeDirection dir'):accum
+             in reconstructPath (applyMovement dir' point) (oppositeDirection dir' : accum)
   helper $ Q.singleton start 0
 
 
