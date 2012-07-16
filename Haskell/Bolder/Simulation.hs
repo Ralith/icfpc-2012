@@ -235,20 +235,9 @@ fallsInto world index =
 
 safeMove :: World -> Location -> Location -> Bool
 safeMove world prev next =
-    let willBeCrushed =
-          foldl' (\soFar path ->
-                    soFar &&
-                    case worldNearbyCell world prev path of
-                      Just cellAbove
-                        | cellFalls cellAbove
-                        , fallPossible world (Just path)
-                            (applyMovement path next) True -> False
-                      _ -> True)
-                 True
-                 [[Up], [Up, Left], [Up, Right]]
-    in if next == (applyMovement Down prev)
-         then not willBeCrushed
-         else True
+    if next == (applyMovement Down prev)
+    then not $ isJust $ fallsInto world prev
+    else True
 
 adjacentBeardGrows :: Location -> World -> Bool
 adjacentBeardGrows location world =
