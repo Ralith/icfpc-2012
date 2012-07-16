@@ -38,20 +38,28 @@ planner world = do
   fromMaybe (yield AbortAction) $ do
     route <- nextRoute world
     return $ do
-      maybeWorld <-
-        foldM (\maybeWorld action -> do
-                 case maybeWorld of
-                   Nothing -> return Nothing
-                   Just world -> do
+      (maybeWorld, _) <-
+        foldM (\maybeWorldAndFlag action -> do
+                 case maybeWorldAndFlag of
+                   (Just world, True) -> do
                      yield action
                      case advanceWorld' world action of
-                       (Step, newWorld) -> return $ Just newWorld
-                       _ -> return Nothing)
-              (Just world)
+                       (Step, newWorld)
+                         | sufficientlySimilar world newWorld ->
+                           return (Just newWorld, True)
+                         | otherwise ->
+                           return (Just newWorld, False)
+                       _ -> return (Nothing, True)
+                   _ -> return maybeWorldAndFlag)
+              (Just world, True)
               (routeActions route)
       case maybeWorld of
         Nothing -> yield AbortAction
         Just world -> planner world
+
+
+sufficientlySimilar :: World -> World -> Bool
+sufficientlySimilar oldWorld newWorld = True
 
 
 nextRoute :: World -> Maybe Route
