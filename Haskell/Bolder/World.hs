@@ -32,7 +32,6 @@ import Data.Lens.Common
 import Data.Conduit
 import Data.PSQueue (PSQ, Binding(..))
 import qualified Data.PSQueue as Q
-import Debug.Trace
 
 type Location = (Int, Int)
 
@@ -406,7 +405,7 @@ findPath' safepred world start dest = do
   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
   let helper :: PSQ (Location, Int) Float -> ST s (Maybe [Direction])
       helper open =
-           case Q.findMin (traceShow open open) of
+           case Q.findMin open of
              Nothing -> return Nothing
              Just ((current, gscore) :-> fscore) ->
                  if current == dest
@@ -425,13 +424,13 @@ findPath' safepred world start dest = do
                                                   open'
                               else return open')
                          (Q.delete (current, gscore) open)
-                         (traceShow neighbors neighbors)
+                         neighbors
                          >>= helper
       reconstructPath :: Location -> [Direction] -> ST s [Direction]
       reconstructPath point accum = do
         dir <- readArray cameFrom point
         if dir == 0
-        then getAssocs cameFrom >>= (flip traceShow $ return accum)
+        then return accum
         else let dir' = decodeDir dir
              in reconstructPath (applyMovement (oppositeDirection dir') point) (dir' : accum)
   helper $ Q.singleton (start, 0) $ distance start dest

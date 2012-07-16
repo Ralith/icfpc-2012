@@ -110,7 +110,7 @@ nextRoute' world =
 
 goals :: World -> Location -> [Location]
 goals w origin =
-    sortBy (\a b -> compare (distance origin a) (distance origin b)) $
+    --sortBy (\a b -> compare (distance origin a) (distance origin b)) $
     filter (\loc -> let cell = worldCell w loc
                     in (cell == Just LambdaCell || cell == Just (LambdaLiftCell True)
                        && safeSpot w loc))
