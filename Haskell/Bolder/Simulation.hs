@@ -229,7 +229,10 @@ fallsInto world hypothesizeEmpty index =
                             | cellFalls cellAbove
                             , fallPossible world (Just path)
                                                (applyMovement path index)
-                                               hypothesizeEmpty ->
+                                               (if hypothesizeEmpty
+                                                then Just index
+                                                else Nothing)
+                                                   ->
                                                    Just $ cellAfterFalling world index cellAbove
                         _ -> Nothing)
     Nothing [[Up], [Up, Left], [Up, Right]]
@@ -248,15 +251,12 @@ adjacentTo :: World -> Location -> Cell -> Bool
 adjacentTo world location cell =
     any (== cell) (map ((fromMaybe WallCell) . worldNearbyCell world location) allNearbyPaths)
 
-fallPossible :: World -> Maybe [Direction] -> Location -> Bool -> Bool
+fallPossible :: World -> Maybe [Direction] -> Location -> Maybe Location -> Bool
 fallPossible world path index hypothesizeEmpty =
-  case (if hypothesizeEmpty
-          then Just EmptyCell
-          else worldNearbyCell world index Down) of
+  case (sampleCell $ applyMovement Down index) of
     Just LambdaCell
         | not (isJust path) || path == Just [Up,Left]
-        , Just EmptyCell <- worldNearbyCell world index Right
-        , Just EmptyCell <- worldNearbyCell world index [Down,Right]
+        , isEmpty Right, isEmpty [Down,Right]
         -> True
 
     Just EmptyCell
@@ -279,25 +279,25 @@ fallPossible world path index hypothesizeEmpty =
 
   where
     rockMovesLeft
-        | Just EmptyCell <- worldNearbyCell world index Left
-        , Just EmptyCell <- if hypothesizeEmpty
-                              then Just EmptyCell
-                              else worldNearbyCell world index [Down,Left]
-        = True
+        | isEmpty Left, isEmpty [Down,Left] = True
         | otherwise = False
 
     rockMovesRight
-        | Just EmptyCell <- worldNearbyCell world index Right
-        , Just EmptyCell <- if hypothesizeEmpty
-                              then Just EmptyCell
-                              else worldNearbyCell world index [Down,Right]
-        = True
+        | isEmpty Right, isEmpty [Down,Right] = True
         | otherwise = False
+
+    isEmpty :: Movement a => a -> Bool
+    isEmpty path = maybe False cellIsEmpty $ sampleCell $ applyMovement path index
+
+    sampleCell index =
+        if (Just index == hypothesizeEmpty)
+        then Just EmptyCell
+        else worldCell world index
 
 
 advanceFallCell :: World -> Cell -> Location -> Cell
 advanceFallCell world cell index =
-  if fallPossible world Nothing index False then EmptyCell else cellAtRest cell
+  if fallPossible world Nothing index Nothing then EmptyCell else cellAtRest cell
 
 
 cellAtRest :: Cell -> Cell

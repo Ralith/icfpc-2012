@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables #-}
 module Bolder.World
-    (World(..), Cell(..), Action(..), Direction(..), Location,
+    (World(..), Cell(..), Action(..), Direction(..), Location, Movement,
      oppositeDirection, applyMovement,
      worldSize, worldInBounds, worldCell, worldNearbyCell, worldIndices,
      worldToList,
