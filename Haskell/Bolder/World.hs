@@ -11,7 +11,7 @@ module Bolder.World
      Word8Image,
      encodeCell, decodeCell,
      allNeighborPaths, allNearbyPaths,
-     floodWorld, exits)
+     floodWorld, exits, findPath)
     where
 
 import Prelude hiding (Either(..))
@@ -30,6 +30,8 @@ import Data.List
 --import Data.DeriveTH
 import Data.Lens.Common
 import Data.Conduit
+import Data.Graph.AStar
+import qualified Data.Set as S
 
 type Location = (Int, Int)
 
@@ -368,6 +370,16 @@ exits :: World -> Location -> [Direction]
 exits world location =
     filter (\path -> maybe False cellEnterable $ worldCell world $ applyMovement path location)
            (map head allNeighborPaths)
+
+
+findPath :: World -> Location -> Location -> Maybe [Direction]
+findPath world start dest = fmap (map snd) $
+    aStar (\(v, _) -> S.fromList $ map (\d -> (applyMovement d v, d))
+                                       (exits world v))
+          (\_ _ -> 1)
+          (\(v, _) -> sqrt $ fromIntegral $ ((fst v - fst start)^2 + (snd v - snd start)^2))
+          (\(v, _) -> v == dest)
+          (start, Down) -- Direction component of start is ignored
 
 
 ------------------------------------------------------------------------------------------

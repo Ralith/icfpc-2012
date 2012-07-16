@@ -110,6 +110,16 @@ nextRoute' world =
                                  else maybeBest)
                         Nothing
 
+goals :: World -> [Location]
+goals w =
+    filter (\loc -> worldCell w loc == (Just LambdaCell) &&
+                    safeSpot w loc)
+           $ worldIndices w
+
+goalPaths :: Monad m => World -> Source m [Direction]
+goalPaths w = (C.sourceList $ goals w)
+           $= C.mapMaybe (findPath w (worldRobotPosition w))
+
 {-
   fmap (\(route, _, _) -> route)
    $ foldl'
