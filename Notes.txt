@@ -11,6 +11,13 @@ and offsets are typically listed as column first, then row, which agrees with
 the (x, y) convention but disagrees with common English usage.
 
 
+TODO
+
+  - Find out why we sometimes do deadly things (see: horock1)
+  - Use trampolines if nothing else can be found
+  - Push rocks (as a last resort)
+  - Check if dropping a rock by going under it would be bad
+
 SUBTLE JOKE
 
   This space intentionally left blank.
