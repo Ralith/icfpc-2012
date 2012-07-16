@@ -11,7 +11,7 @@ module Bolder.World
      Word8Image,
      encodeCell, decodeCell,
      allNeighborPaths, allNearbyPaths,
-     floodWorld, exits, findPath)
+     floodWorld, exits, findPath, distance)
     where
 
 import Prelude hiding (Either(..))
@@ -377,9 +377,12 @@ findPath world start dest = fmap (map snd) $
     aStar (\(v, _) -> S.fromList $ map (\d -> (applyMovement d v, d))
                                        (exits world v))
           (\_ _ -> 1)
-          (\(v, _) -> sqrt $ fromIntegral $ ((fst v - fst start)^2 + (snd v - snd start)^2))
+          (\(v, _) -> distance start v)
           (\(v, _) -> v == dest)
           (start, Down) -- Direction component of start is ignored
+
+distance :: (Floating a, Integral a1) => (a1, a1) -> (a1, a1) -> a
+distance l1 l2 = sqrt $ fromIntegral $ ((fst l2 - fst l1)^2 + (snd l2 - snd l1)^2)
 
 
 ------------------------------------------------------------------------------------------
