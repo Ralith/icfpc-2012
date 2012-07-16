@@ -53,7 +53,7 @@ planner world = do
                        _ -> return (Nothing, True)
                    _ -> return maybeWorldAndFlag)
               (Just world, True)
-              (routeActions route)
+              route
       case maybeWorld of
         Nothing -> yield AbortAction
         Just world -> planner world
@@ -96,16 +96,12 @@ nextRoute world = do
 -}
 
 
-nextRoute :: [Location] -> World -> Maybe Route
+nextRoute :: [Location] -> World -> Maybe [Action]
 nextRoute candidates world =
   runIdentity $ paths candidates world
               $$ C.consume
                  >>= return
-                     . fmap (\directions ->
-                               Route {
-                                   routeActions = map MoveAction directions,
-                                   routeProblems = []
-                                 })
+                     . fmap (\directions -> map MoveAction directions)
                      . foldl' (\maybeBest candidate ->
                                  case maybeBest of
                                    Nothing -> Just candidate
