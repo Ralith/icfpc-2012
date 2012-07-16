@@ -405,7 +405,7 @@ findPath safepred world start dest = runST $ do
              Nothing -> return Nothing
              Just (current :-> _) ->
                  if current == dest
-                 then return $ Just $ reconstructPath current []
+                 then fmap Just $ reconstructPath current []
                  else return Nothing
       reconstructPath point accum = do
         dir <- readArray cameFrom point
