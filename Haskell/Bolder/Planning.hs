@@ -45,7 +45,7 @@ planner world = do
                    Just world -> do
                      yield action
                      case advanceWorld' world action of
-                       Step newWorld -> return $ Just newWorld
+                       (Step, newWorld) -> return $ Just newWorld
                        _ -> return Nothing)
               (Just world)
               (routeActions route)
@@ -263,8 +263,8 @@ routeIsSafe world route =
         if deadly world (worldRobotPosition world)
           then False
           else case advanceWorld' world action of
-                 Step newWorld -> actionsAreSafe newWorld rest
-                 Win _ -> True
+                 (Step, newWorld) -> actionsAreSafe newWorld rest
+                 (Win, _) -> True
                  _ -> False
   in actionsAreSafe world (routeActions route)
 

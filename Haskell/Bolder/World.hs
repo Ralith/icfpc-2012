@@ -126,6 +126,11 @@ instance Movement [Direction] where
     applyMovement rest $ applyMovement direction index
 
 
+applyAction :: Action -> Location -> Location
+applyAction (MoveAction m) l = applyMovement m l
+applyAction _ l = l
+
+
 oppositeDirection :: Direction -> Direction
 oppositeDirection Left = Right
 oppositeDirection Right = Left

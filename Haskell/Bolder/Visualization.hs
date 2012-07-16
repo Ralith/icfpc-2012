@@ -8,15 +8,9 @@ import System.IO
 import Bolder.World
 import Bolder.Simulation
 
-visualize :: StepResult -> IO ()
-visualize result = do
-  let world = case result of
-                Step w -> w
-                Abort w -> w
-                LossCrushed w -> w
-                LossDrowned w -> w
-                Win w -> w
-      (width, height) = worldSize world
+visualize :: World -> StepResult -> [T.Text] -> IO ()
+visualize world result messages = do
+  let (width, height) = worldSize world
       water = worldFloodingLevel world
   putStr $ "\x1B[f\x1B[J"
   mapM_ (\rowIndex -> do
@@ -60,19 +54,19 @@ visualize result = do
                      ++ (show informationStartColumn) ++ "f"
                      ++ (T.unpack line))
         (zip [2 ..]
-             (  (T.pack $ (show ticks) ++ " ticks")
-              : (T.pack $ (show $ lambdasRemaining) ++ " lambdas remaining")
-              : (T.pack $ (show $ points result)  ++ " points")
+             (  (T.pack $ (show $ lambdasRemaining) ++ " lambdas remaining")
+              : (T.pack $ (show $ points result world)  ++ " points")
               : (T.pack $ (show $ worldDrowningTicks world)
                       ++ "/" ++ (show $ worldDrowningDuration world)
                              ++ " drowned")
               : (T.pack $ (show $ worldRazors world) ++ " razors")
-              : case result of
-                  Step _        -> ""
-                  Win _         -> "Win!"
-                  Abort _       -> "Abort"
-                  LossCrushed _ -> "Loss: Crushed"
-                  LossDrowned _ -> "Loss: Crushed"
-              : []))
+              : (T.pack $
+                  case result of
+                    Step        -> "Step " ++ (show ticks)
+                    Win         -> "Win! (" ++ (show ticks) ++ " steps)"
+                    Abort       -> "Abort (" ++ (show ticks) ++ " steps)"
+                    LossCrushed -> "Loss: Crushed (" ++ (show ticks) ++ " steps)"
+                    LossDrowned -> "Loss: Crushed (" ++ (show ticks) ++ " steps)")
+              : messages))
   putStr $ "\x1B[" ++ (show $ height + 2) ++ ";1f"
   hFlush stdout

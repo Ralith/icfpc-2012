@@ -34,18 +34,21 @@ main = do
   case parameters of
     [worldFilePath] -> do
       world <- readWorld worldFilePath
-      visualize $ Step world
+      visualize world Step []
       let actionSource = if maybe False (== "2") debug
                          then C.sourceHandle stdin $= extractAction
                          else planner world $= slower
       runResourceT $ actionSource
                    $$ C.foldM (\world action -> do
                                   when (maybe False (== "1") debug) (lift $ void getLine)
-                                  let result = advanceWorld' world action
-                                  lift $ visualize result
+                                  let before = worldRobotPosition world
+                                  let (result, world') = advanceWorld' world action
+                                  let after = worldRobotPosition world'
+                                  lift $ visualize world' result
+                                           [if safeMove world before after then "Safe" else "Deadly"]
                                   case result of
-                                    Step world' -> return world'
-                                    _           -> lift $ exitSuccess)
+                                    Step -> return world'
+                                    _    -> lift $ exitSuccess)
                                world
       exitSuccess
     _ -> do

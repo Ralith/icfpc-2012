@@ -32,11 +32,11 @@ data Circumstance
 
 
 data StepResult
-  = Step World
-  | Win World
-  | Abort World
-  | LossDrowned World
-  | LossCrushed World
+  = Step
+  | Win
+  | Abort
+  | LossDrowned
+  | LossCrushed
   deriving (Show, Eq)
 
 type Context = State World
@@ -70,10 +70,10 @@ isRobotCrushed oldWorld newWorld  =
 incTicks :: Context ()
 incTicks = modify (worldTicksL ^+= 1)
 
-advanceWorld' :: World -> Action -> StepResult
+advanceWorld' :: World -> Action -> (StepResult, World)
 advanceWorld' w a = evalState (advanceWorld a) w
 --This can be cleaned up more with a State World
-advanceWorld :: Action -> Context StepResult
+advanceWorld :: Action -> Context (StepResult, World)
 advanceWorld action = do
   size@(width, height) <- gets worldSize
   allIndices           <- gets worldIndices 
@@ -105,14 +105,14 @@ advanceWorld action = do
   world        <- get
 
   if action == AbortAction
-     then return $ Abort world
+     then return $ (Abort, world)
      else if (worldRobotPosition world) == (worldLiftPosition world)
-            then return $ Win world
+            then return $ (Win, world)
             else if robotDrowned world
-                  then return $ LossDrowned world
+                  then return $ (LossDrowned, world)
                   else if robotCrushed
-                         then return $ LossCrushed world
-                         else return $ Step world
+                         then return $ (LossCrushed, world)
+                         else return $ (Step, world)
 
 
 advanceRobot :: Action -> World -> World
@@ -323,9 +323,9 @@ worldPushable world position direction
     | otherwise = False
 
 
-points :: StepResult -> Int
-points (Step w)        = (worldLambdasCollected w) * 25 - (worldTicks w)
-points (Abort w)       = (worldLambdasCollected w) * 50 - (worldTicks w)
-points (Win w)         = (worldLambdasCollected w) * 75 - (worldTicks w)
-points (LossDrowned w) = points $ Step w
-points (LossCrushed w) = points $ Step w
+points :: StepResult -> World -> Int
+points Step w        = (worldLambdasCollected w) * 25 - (worldTicks w)
+points Abort w       = (worldLambdasCollected w) * 50 - (worldTicks w)
+points Win w         = (worldLambdasCollected w) * 75 - (worldTicks w)
+points LossDrowned w = points Step w
+points LossCrushed w = points Step w
