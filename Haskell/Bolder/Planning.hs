@@ -118,7 +118,7 @@ goals w origin =
 
 goalPaths :: Monad m => World -> Source m [Direction]
 goalPaths w = (C.sourceList $ goals w (worldRobotPosition w))
-           $= C.mapMaybe (findPath w (worldRobotPosition w))
+           $= C.mapMaybe (findPath (safeSpot w) w (worldRobotPosition w))
 
 {-
   fmap (\(route, _, _) -> route)

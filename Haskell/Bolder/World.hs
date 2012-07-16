@@ -372,10 +372,12 @@ exits world location =
            (map head allNeighborPaths)
 
 
-findPath :: World -> Location -> Location -> Maybe [Direction]
-findPath world start dest = fmap (map snd) $
-    aStar (\(v, _) -> S.fromList $ map (\d -> (applyMovement d v, d))
-                                       (exits world v))
+findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
+findPath safepred world start dest = fmap (map snd) $
+    aStar (\(v, _) -> S.fromList $
+                      filter (\(v, _) -> safepred v) $
+                      map (\d -> (applyMovement d v, d))
+                              (exits world v))
           (\_ _ -> 1)
           (\(v, _) -> distance start v)
           (\(v, _) -> v == dest)
