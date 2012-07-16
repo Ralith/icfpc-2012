@@ -413,6 +413,7 @@ findPath' safepred world start dest = do
                  else do
                    writeArray closed current True
                    neighbors <- filterM (fmap not . readArray closed . fst)
+                                $ filter (\(l, _) -> safepred l)
                                 $ (map (\d -> (applyMovement d current, d))
                                   $ exits world current)
                    foldM (\open' (n, d) ->
