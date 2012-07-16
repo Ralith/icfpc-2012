@@ -30,7 +30,6 @@ import Data.List
 --import Data.DeriveTH
 import Data.Lens.Common
 import Data.Conduit
-import Data.Graph.AStar
 import Data.PSQueue (PSQ, Binding(..))
 import qualified Data.PSQueue as Q
 
@@ -396,25 +395,25 @@ exits world location =
            (map head allNeighborPaths)
 
 
--- findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
--- findPath safepred world start dest = runST $ do
---   cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
---   closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
---   let helper :: PSQ Location Int -> ST s (Maybe [Direction])
---       helper open =
---            case Q.findMin open of
---              Nothing -> return Nothing
---              Just (current :-> _) ->
---                  if current == dest
---                  then return $ Just $ reconstructPath current
---                  else return Nothing
---       reconstructPath point = do
---         dir <- readArray cameFrom point
---         if dir == 0
---         then return []
---         else let dir' = decodeDir dir
---              in (reconstructPath $ applyMovement dir' point) >>= return . ((oppositeDirection dir') :)
---   helper $ Q.singleton start 0
+findPath :: (Location -> Bool) -> World -> Location -> Location -> Maybe [Direction]
+findPath safepred world start dest = runST $ do
+  cameFrom <- newArray ((1,1), (worldSize world)) 0 :: ST s (STUArray s Location Word8)
+  closed <- newArray ((1,1), (worldSize world)) False :: ST s (STUArray s Location Bool)
+  let helper :: PSQ Location Int -> ST s (Maybe [Direction])
+      helper open =
+           case Q.findMin open of
+             Nothing -> return Nothing
+             Just (current :-> _) ->
+                 if current == dest
+                 then return $ Just $ reconstructPath current
+                 else return Nothing
+      reconstructPath point = do
+        dir <- readArray cameFrom point
+        if dir == 0
+        then return []
+        else let dir' = decodeDir dir
+             in (reconstructPath $ applyMovement dir' point) >>= return . ((oppositeDirection dir') :)
+  helper $ Q.singleton start 0
 
 
 encodeDir Up = 1
