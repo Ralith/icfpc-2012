@@ -9,6 +9,7 @@ module Bolder.Simulation (
     isLiftOpen,
     worldPushable,
     points,
+    fallsInto,
     safeMove,
     Circumstance(..)) where
 
@@ -240,7 +241,7 @@ fallsInto world hypothesizeEmpty index =
 safeMove :: World -> Location -> Location -> Bool
 safeMove world prev next =
     if next == (applyMovement Down prev)
-    then not $ isJust $ fallsInto world True prev
+    then not $ (isJust $ fallsInto world True prev)
     else True
 
 adjacentBeardGrows :: Location -> World -> Bool

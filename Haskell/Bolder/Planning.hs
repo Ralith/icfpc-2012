@@ -37,11 +37,7 @@ planner :: (Monad m) => World -> Source m Action
 planner world = do
   fromMaybe (yield AbortAction) $ do
     route <-        (nextRoute (goals (== LambdaCell) world) world)
-            `mplus` (nextRoute (goals (\c -> case c of
-                                                TrampolineCell _ -> True
-                                                _ -> False)
-                                      world)
-                                world)
+            `mplus` (nextRoute (goals cellIsTrampoline world) world)
     return $ do
       (maybeWorld, _) <-
         foldM (\maybeWorldAndFlag action -> do
@@ -124,7 +120,11 @@ goals :: (Cell -> Bool) -> World -> [Location]
 goals pred w =
     --sortBy (\a b -> compare (distance origin a) (distance origin b)) $
     filter (\loc -> let cell = worldCell w loc
-                    in maybe False pred cell || cell == Just (LambdaLiftCell True))
+                    in (maybe False pred cell || cell == Just (LambdaLiftCell True))
+                       && (if (maybe False cellEnterable cell)
+                              && not (maybe False cellIsTrampoline cell)
+                           then not $ (isJust $ fallsInto w True loc) && (exits w loc == [Down])
+                           else True))
            $ worldIndices w
 
 paths :: Monad m => [Location] -> World -> Source m [Direction]

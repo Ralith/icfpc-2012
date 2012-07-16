@@ -6,7 +6,7 @@ module Bolder.World
      worldToList,
      robotDrowned,
      parseWorld, makeWorldData, mutateWorld,
-     cellEnterable, cellPushable, cellIsEmpty, cellFalls,
+     cellEnterable, cellPushable, cellIsEmpty, cellFalls, cellIsTrampoline,
      isLambdaCell, worldTicksL, worldDataL, worldBeardStateL, worldRazorsL,
      Word8Image,
      encodeCell, decodeCell,
@@ -343,6 +343,8 @@ cellEnterable RobotCell               = True
 cellEnterable cell | cellIsEmpty cell = True
                    | otherwise        = False
 
+cellIsTrampoline (TrampolineCell _) = True
+cellIsTrampoline _ = False
 
 cellPushable :: Cell -> Bool
 cellPushable (RockCell _) = True
