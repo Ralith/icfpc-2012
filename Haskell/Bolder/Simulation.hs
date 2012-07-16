@@ -64,7 +64,8 @@ getCircumstances indices world =
 
 isRobotCrushed :: World -> World -> Bool
 isRobotCrushed oldWorld newWorld  =
-    isJust $ fallsInto oldWorld $ applyMovement Up (worldRobotPosition newWorld)
+    isJust $ fallsInto oldWorld False
+               $ applyMovement Up (worldRobotPosition newWorld)
 
 incTicks :: Context ()
 incTicks = modify (worldTicksL ^+= 1)
@@ -211,7 +212,7 @@ advanceCell world liftOpen action index =
       else if cellIsEmpty cell
            then if adjacentBeardGrows index world
                 then BeardCell
-                else fromMaybe cell $ fallsInto world index
+                else fromMaybe cell $ fallsInto world False index
            else case cell of
                   LambdaLiftCell False | liftOpen -> LambdaLiftCell True
                   BeardCell | action == ShaveAction
@@ -219,8 +220,8 @@ advanceCell world liftOpen action index =
                             , worldRazors world > 0 -> EmptyCell
                   _ -> cell)
 
-fallsInto :: World -> Location -> Maybe Cell
-fallsInto world index =
+fallsInto :: World -> Bool -> Location -> Maybe Cell
+fallsInto world hypothesizeEmpty index =
     foldl' (\soFar path ->
                 mplus soFar $
                       case worldNearbyCell world index path of
@@ -228,7 +229,7 @@ fallsInto world index =
                             | cellFalls cellAbove
                             , fallPossible world (Just path)
                                                (applyMovement path index)
-                                               False ->
+                                               hypothesizeEmpty ->
                                                    Just $ cellAfterFalling world index cellAbove
                         _ -> Nothing)
     Nothing [[Up], [Up, Left], [Up, Right]]
@@ -236,7 +237,7 @@ fallsInto world index =
 safeMove :: World -> Location -> Location -> Bool
 safeMove world prev next =
     if next == (applyMovement Down prev)
-    then not $ isJust $ fallsInto world prev
+    then not $ isJust $ fallsInto world True prev
     else True
 
 adjacentBeardGrows :: Location -> World -> Bool
