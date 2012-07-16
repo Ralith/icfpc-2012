@@ -233,7 +233,7 @@ fallsInto world index =
                             , fallPossible world (Just path)
                                                (applyMovement path index)
                                                False ->
-                                                   Just $ cellAfterFalling cellAbove
+                                                   Just $ cellAfterFalling world index cellAbove
                         _ -> Nothing)
     Nothing [[Up], [Up, Left], [Up, Right]]
 
@@ -304,6 +304,7 @@ fallPossible world path index hypothesizeEmpty =
         = True
         | otherwise = False
 
+
 advanceFallCell :: World -> Cell -> Location -> Cell
 advanceFallCell world cell index =
   if fallPossible world Nothing index False then EmptyCell else cellAtRest cell
@@ -312,14 +313,16 @@ advanceFallCell world cell index =
 cellAtRest :: Cell -> Cell
 cellAtRest (RockCell _) = RockCell False
 cellAtRest (HigherOrderRockCell False) = HigherOrderRockCell False
-cellAtRest (HigherOrderRockCell True) = LambdaCell
 cellAtRest cell = cell
 
 
-cellAfterFalling :: Cell -> Cell
-cellAfterFalling (RockCell _) = RockCell True
-cellAfterFalling (HigherOrderRockCell _) = HigherOrderRockCell True
-cellAfterFalling cell = cell
+cellAfterFalling :: World -> Location -> Cell -> Cell
+cellAfterFalling _ _ (RockCell _) = RockCell True
+cellAfterFalling world loc (HigherOrderRockCell _) =
+    if maybe True (not . cellIsEmpty) (worldNearbyCell world loc Down)
+    then LambdaCell
+    else HigherOrderRockCell True
+cellAfterFalling _ _ cell = cell
 
 
 worldPushable :: World -> Location -> Direction -> Bool
